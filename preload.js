@@ -69,5 +69,10 @@ contextBridge.exposeInMainWorld('api', {
     const listener = (_, payload) => callback(payload);
     ipcRenderer.on('terminal-output-system', listener);
     return () => ipcRenderer.removeListener('terminal-output-system', listener);
+  },
+  onMirrorStatusChanged: (callback) => {
+    const listener = (_, active) => callback(active);
+    ipcRenderer.on('mirror-status-changed', listener);
+    return () => ipcRenderer.removeListener('mirror-status-changed', listener);
   }
 });

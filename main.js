@@ -72,7 +72,7 @@ function resetInactivityTimer() {
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('terminal-output-system', {
           type: 'stdout',
-          data: '\n[Hệ Thống] Đã tự động ngắt kết nối Wifi sau 30 phút không hoạt động.\n'
+          data: '\n[System] Automatically disconnected Wi-Fi after 30 minutes of inactivity.\n'
         });
       }
     });
@@ -228,6 +228,9 @@ function startScrcpyTracking() {
           overlayWindow.hide();
           isMirrorActive = false;
           lastOverlayBounds = null;
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('mirror-status-changed', false);
+          }
           if (wereFKeysRegistered) {
             globalShortcut.unregisterAll();
             wereFKeysRegistered = false;
@@ -391,7 +394,9 @@ ipcMain.handle('start-scrcpy', async (event, args) => {
         isMirrorActive = false;
         spawnedPids = spawnedPids.filter(p => p !== proc.pid);
         resetInactivityTimer();
-        // Overlay auto-hides via tracking loop notFoundCount
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('mirror-status-changed', false);
+        }
       });
 
       // Start tracking after scrcpy window has time to appear
@@ -452,6 +457,9 @@ ipcMain.handle('set-sidebar-state', (event, expanded) => {
 // ─── IPC: Toggle overlay visibility ──────────────────────────────────────────
 ipcMain.handle('toggle-controller-window', (event, show) => {
   if (!overlayWindow) return { success: false };
+  if (!isMirrorActive && show !== false) {
+    return { success: false, error: 'Mirror session is not active!' };
+  }
   if (show !== undefined) {
     show ? overlayWindow.show() : overlayWindow.hide();
   } else {
@@ -480,7 +488,7 @@ ipcMain.handle('quit-app-clean', () => {
 // ─── IPC: Execute key from overlay ───────────────────────────────────────────
 ipcMain.handle('execute-controller-key', async (event, key) => {
   resetInactivityTimer();
-  if (!activeDeviceId) return { success: false, error: 'Chưa chọn thiết bị!' };
+  if (!activeDeviceId) return { success: false, error: 'No device selected!' };
 
   if (key === 'password') {
     mainWindow?.webContents.send('show-password-prompt');

@@ -61,16 +61,16 @@ const btnQuitApp = document.getElementById('btn-quit-app');
 // --- Tab Details Map ---
 const tabDetails = {
   'devices-tab': {
-    title: 'Thiết Bị & Phản Chiếu',
-    desc: 'Quản lý kết nối điện thoại và tùy chỉnh các thông số Scrcpy nâng cao'
+    title: 'Devices & Mirroring',
+    desc: 'Manage phone connections and customize advanced Scrcpy settings'
   },
   'wifi-tab': {
-    title: 'Kết Nối Không Dây (Wi-Fi Debugging)',
-    desc: 'Thiết lập kết nối ADB không dây nhanh chóng qua Mã QR hoặc Địa chỉ IP'
+    title: 'Wireless Connection (Wi-Fi Debugging)',
+    desc: 'Set up quick wireless ADB connection via QR Code or IP Address'
   },
   'terminal-tab': {
     title: 'Terminal CMD',
-    desc: 'Giao diện dòng lệnh tương tác trực tiếp với các tiến trình ADB và Shell hệ thống'
+    desc: 'Interactive command line interface to communicate directly with ADB and system shell'
   }
 };
 
@@ -121,38 +121,39 @@ async function checkAdbStatus() {
   const res = await window.api.executeCommand('adb devices');
   if (res.success) {
     adbStatusDot.className = 'dot running';
-    adbStatusText.innerText = 'Đang chạy';
+    adbStatusText.innerText = 'Running';
   } else {
     adbStatusDot.className = 'dot stopped';
-    adbStatusText.innerText = 'Đã dừng';
+    adbStatusText.innerText = 'Stopped';
   }
 }
 
 btnKillServer.addEventListener('click', async () => {
-  appendTerminalLine('[Hệ Thống] Đang tắt ADB server...', 'system-line');
+  appendTerminalLine('[System] Stopping ADB server...', 'system-line');
   const res = await window.api.executeCommand('adb kill-server');
   if (res.success) {
-    appendTerminalLine('ADB Server đã tắt thành công.', 'success-line');
+    appendTerminalLine('ADB Server stopped successfully.', 'success-line');
   } else {
-    appendTerminalLine('Có lỗi xảy ra: ' + res.stderr, 'error-line');
+    appendTerminalLine('An error occurred: ' + res.stderr, 'error-line');
   }
   checkAdbStatus();
   refreshDevicesList();
 });
 
 btnStartServer.addEventListener('click', async () => {
-  appendTerminalLine('[Hệ Thống] Đang bật ADB server...', 'system-line');
+  appendTerminalLine('[System] Starting ADB server...', 'system-line');
   const res = await window.api.executeCommand('adb start-server');
   if (res.success) {
-    appendTerminalLine('ADB Server đã bật thành công.', 'success-line');
+    appendTerminalLine('ADB Server started successfully.', 'success-line');
   } else {
-    appendTerminalLine('Có lỗi xảy ra: ' + res.stderr, 'error-line');
+    appendTerminalLine('An error occurred: ' + res.stderr, 'error-line');
   }
   checkAdbStatus();
   refreshDevicesList();
 });
 
 // Periodically check ADB status
+// Let's use a 5-second interval
 setInterval(checkAdbStatus, 5000);
 checkAdbStatus();
 
@@ -169,16 +170,16 @@ if (btnQuitApp) {
 
 async function refreshDevicesList() {
   btnRefreshDevices.disabled = true;
-  btnRefreshDevices.innerText = '🔄 Đang tìm...';
+  btnRefreshDevices.innerText = '🔄 Refreshing...';
   
   const res = await window.api.executeCommand('adb devices');
   devicesList.innerHTML = '';
   
   if (!res.success) {
     noDevicesMsg.style.display = 'flex';
-    deviceCountBadge.innerText = '0 thiết bị';
+    deviceCountBadge.innerText = '0 devices';
     btnRefreshDevices.disabled = false;
-    btnRefreshDevices.innerText = '🔄 Làm Mới Thiết Bị';
+    btnRefreshDevices.innerText = '🔄 Refresh Devices';
     return;
   }
   
@@ -204,7 +205,7 @@ async function refreshDevicesList() {
         continue;
       }
       
-      parsedDevices.push({ id, status, model: 'Đang tải thông tin...' });
+      parsedDevices.push({ id, status, model: 'Loading details...' });
     }
   }
   
@@ -212,10 +213,10 @@ async function refreshDevicesList() {
   
   if (devices.length === 0) {
     noDevicesMsg.style.display = 'flex';
-    deviceCountBadge.innerText = '0 thiết bị';
+    deviceCountBadge.innerText = '0 devices';
   } else {
     noDevicesMsg.style.display = 'none';
-    deviceCountBadge.innerText = `${devices.length} thiết bị`;
+    deviceCountBadge.innerText = `${devices.length} device(s)`;
     
     // Render placeholders
     devices.forEach((dev, idx) => {
@@ -239,13 +240,13 @@ async function refreshDevicesList() {
   }
   
   btnRefreshDevices.disabled = false;
-  btnRefreshDevices.innerText = '🔄 Làm Mới Thiết Bị';
+  btnRefreshDevices.innerText = '🔄 Refresh Devices';
 }
 
 function renderDeviceItem(dev, index) {
   const isOnline = dev.status === 'device';
   const statusClass = isOnline ? 'online' : 'unauthorized';
-  const statusLabel = isOnline ? 'Hoạt động' : dev.status;
+  const statusLabel = isOnline ? 'Active' : dev.status;
 
   const item = document.createElement('div');
   item.className = 'device-item';
@@ -261,7 +262,7 @@ function renderDeviceItem(dev, index) {
     </div>
     <div class="device-item-right">
       <button class="btn btn-primary btn-glow" id="btn-mirror-${index}" ${!isOnline ? 'disabled' : ''}>
-        ⚡ Phản Chiếu
+        ⚡ Mirror
       </button>
     </div>
   `;
@@ -294,7 +295,7 @@ async function fetchDeviceModel(id, index) {
   const modelRes = await window.api.executeCommand(`adb -s ${id} shell getprop ro.product.model`);
   const brandRes = await window.api.executeCommand(`adb -s ${id} shell getprop ro.product.brand`);
   
-  let modelName = 'Thiết bị Android';
+  let modelName = 'Android Device';
   if (modelRes.success && modelRes.stdout.trim() !== '') {
     const brand = brandRes.success ? brandRes.stdout.trim() : '';
     const model = modelRes.stdout.trim();
@@ -368,15 +369,15 @@ async function startScrcpyMirror(deviceId) {
     const dateStr = new Date().toISOString().replace(/[:.]/g, '-');
     const filename = `record_${deviceId}_${dateStr}.mp4`;
     args.push('-r', filename);
-    appendTerminalLine(`[Scrcpy] Đang ghi hình phản chiếu vào file: ${filename}`, 'system-line');
+    appendTerminalLine(`[Scrcpy] Recording mirror session to file: ${filename}`, 'system-line');
   }
   
-  appendTerminalLine(`[Scrcpy] Khởi chạy phản chiếu thiết bị: ${deviceId} với tham số: ${args.join(' ')}`, 'system-line');
+  appendTerminalLine(`[Scrcpy] Launching mirror session for device: ${deviceId} with parameters: ${args.join(' ')}`, 'system-line');
   
   const mirrorRes = await window.api.startScrcpy(args);
   if (mirrorRes.success) {
     isMirroringActive = true;
-    appendTerminalLine(`Đã mở cửa sổ phản chiếu cho thiết bị ${deviceId}`, 'success-line');
+    appendTerminalLine(`Opened mirror window for device ${deviceId}`, 'success-line');
     // Automatically launch the floating controller bar after a brief delay to sit strictly on top of scrcpy window
     setTimeout(() => {
       if (window.api && window.api.toggleControllerWindow) {
@@ -384,7 +385,7 @@ async function startScrcpyMirror(deviceId) {
       }
     }, 1500);
   } else {
-    appendTerminalLine(`Lỗi khởi chạy phản chiếu: ${mirrorRes.error}`, 'error-line');
+    appendTerminalLine(`Failed to launch mirror: ${mirrorRes.error}`, 'error-line');
   }
 }
 
@@ -395,14 +396,14 @@ btnRegenerateQr.addEventListener('click', generateWirelessQR);
 
 // Send intent to phone via ADB to open Wireless Debugging settings directly
 async function openWirelessSettingsOnPhone() {
-  appendTerminalLine('[Hệ Thống] Đang gửi tín hiệu yêu cầu mở màn hình Gỡ Lỗi Không Dây trên điện thoại...', 'system-line');
+  appendTerminalLine('[System] Sending request to open Wireless Debugging settings on the phone...', 'system-line');
   const res = await window.api.executeCommand('adb shell am start -a android.settings.WIRELESS_DEBUGGING_SETTINGS');
   
   if (res.success && !res.stderr.includes('Error') && !res.stdout.includes('Error')) {
-    appendTerminalLine('Đã kích hoạt mở màn hình Gỡ Lỗi Không Dây thành công trên điện thoại của bạn!', 'success-line');
+    appendTerminalLine('Wireless Debugging settings screen opened successfully on your phone!', 'success-line');
   } else {
-    appendTerminalLine('Không thể mở màn hình cài đặt trên điện thoại. Vui lòng đảm bảo đã cắm cáp USB ban đầu!', 'error-line');
-    alert('Không thể mở màn hình cài đặt trên điện thoại!\n\nBạn vui lòng đảm bảo điện thoại đang được cắm cáp USB vào máy tính để ứng dụng có thể truyền tín hiệu ban đầu này sang điện thoại của bạn nhé!');
+    appendTerminalLine('Failed to open settings on phone. Please ensure it is initially connected via USB!', 'error-line');
+    alert('Could not open settings on phone!\n\nPlease make sure your phone is connected to the PC via USB so that the application can send the initial command.');
   }
 }
 
@@ -415,7 +416,7 @@ async function generateWirelessQR() {
   // 1. Create random service and pairing code
   const randCode = Math.floor(100000 + Math.random() * 900000).toString(); // 6 digits
   const randSuffix = Math.floor(100000 + Math.random() * 900000).toString();
-  const servName = `aero-${randSuffix}`;
+  const servName = `wpr-${randSuffix}`;
   
   currentPairingService = servName;
   currentPairingPassword = randCode;
@@ -437,7 +438,7 @@ async function generateWirelessQR() {
     // Start mDNS listener to catch device pairing request
     startScanningMdns();
   } else {
-    qrLoading.innerText = 'Lỗi tạo QR!';
+    qrLoading.innerText = 'Error generating QR!';
   }
 }
 
@@ -447,7 +448,7 @@ function startScanningMdns() {
   }
   
   isScanningQR = true;
-  qrMdnsLog.innerHTML = `[System] Đang chờ bạn quét QR Code...\n[mDNS] Đang lắng nghe dịch vụ ghép nối: "${currentPairingService}" trên mạng...\n`;
+  qrMdnsLog.innerHTML = `[System] Waiting for QR Code scan...\n[mDNS] Listening for pairing service: "${currentPairingService}" on the network...\n`;
   
   qrScanIntervalId = setInterval(async () => {
     if (!isScanningQR) return;
@@ -458,11 +459,11 @@ function startScanningMdns() {
     
     const lines = res.stdout.split('\n');
     for (let line of lines) {
-      // e.g., "_adb_secure_pairing._tcp.    aero-123456.   192.168.1.100:43211"
+      // e.g., "_adb_secure_pairing._tcp.    wpr-123456.   192.168.1.100:43211"
       if (line.includes('_adb_secure_pairing._tcp') && line.includes(currentPairingService)) {
         stopScanningMdns();
         
-        qrMdnsLog.innerHTML += `\n[FOUND] Phát hiện thiết bị ghép nối!\nChi tiết: ${line.trim()}\n`;
+        qrMdnsLog.innerHTML += `\n[FOUND] Pairing device detected!\nDetails: ${line.trim()}\n`;
         
         // Extract IP & Port
         const match = line.match(/(\d+\.\d+\.\d+\.\d+):(\d+)/);
@@ -470,7 +471,7 @@ function startScanningMdns() {
           const ipPort = match[0];
           performPairAndConnect(ipPort);
         } else {
-          qrMdnsLog.innerHTML += `[Error] Không thể giải mã IP/Port từ: ${line}\n`;
+          qrMdnsLog.innerHTML += `[Error] Cannot extract IP/Port from: ${line}\n`;
         }
         break;
       }
@@ -487,13 +488,13 @@ function stopScanningMdns() {
 }
 
 async function performPairAndConnect(ipPort) {
-  qrMdnsLog.innerHTML += `\n[ADB] Tiến hành ghép nối...\n`;
+  qrMdnsLog.innerHTML += `\n[ADB] Pairing...\n`;
   
   const pairRes = await executeStreamingCommand(`adb pair ${ipPort} ${currentPairingPassword}`, qrMdnsLog);
   
   if (pairRes.success || pairRes.stdout.includes('Successfully paired') || pairRes.stdout.includes('already paired')) {
-    qrMdnsLog.innerHTML += `\n[SUCCESS] Ghép nối THÀNH CÔNG!\n`;
-    qrMdnsLog.innerHTML += `\n[ADB] Đang tìm kiếm cổng kết nối (Connect Port) của thiết bị...\n`;
+    qrMdnsLog.innerHTML += `\n[SUCCESS] Pairing SUCCESSFUL!\n`;
+    qrMdnsLog.innerHTML += `\n[ADB] Searching for connect port of device...\n`;
     
     // Now look for _adb_secure_connect._tcp to get the connect port
     let searchCount = 0;
@@ -510,37 +511,37 @@ async function performPairAndConnect(ipPort) {
               clearInterval(connectInterval);
               const connectIpPort = ipMatch[0];
               
-              qrMdnsLog.innerHTML += `\n[FOUND] Phát hiện cổng kết nối: ${connectIpPort}\n`;
+              qrMdnsLog.innerHTML += `\n[FOUND] Detected connect port: ${connectIpPort}\n`;
               
               const connRes = await executeStreamingCommand(`adb connect ${connectIpPort}`, qrMdnsLog);
               if (connRes.success || connRes.stdout.includes('connected to')) {
                 const ipAddress = ipMatch[1];
-                qrMdnsLog.innerHTML += `\n[ADB] Kết nối ban đầu thành công. Đang chuyển đổi cổng cố định sang 5555 (tcpip 5555)...\n`;
+                qrMdnsLog.innerHTML += `\n[ADB] Connection successful. Switching permanent port to 5555 (tcpip 5555)...\n`;
                 
                 const tcpipRes = await executeStreamingCommand(`adb tcpip 5555`, qrMdnsLog);
                 if (tcpipRes.success) {
-                  qrMdnsLog.innerHTML += `\n[Chờ] Chờ 2 giây để điện thoại cấu hình lại cổng mạng...\n`;
+                  qrMdnsLog.innerHTML += `\n[Wait] Waiting 2 seconds for phone to reconfigure network port...\n`;
                   await new Promise(r => setTimeout(r, 2000));
                   
-                  qrMdnsLog.innerHTML += `\n[ADB] Thực hiện kết nối vĩnh viễn đến cổng chuẩn 5555...\n`;
+                  qrMdnsLog.innerHTML += `\n[ADB] Connecting permanently to standard port 5555...\n`;
                   const finalConnRes = await executeStreamingCommand(`adb connect ${ipAddress}:5555`, qrMdnsLog);
                   
                   if (finalConnRes.success || finalConnRes.stdout.includes('connected to') || finalConnRes.stdout.includes('already connected')) {
-                    qrMdnsLog.innerHTML += `\n🎉 KẾT NỐI WIFI 5555 VĨNH VIỄN THÀNH CÔNG!\n`;
+                    qrMdnsLog.innerHTML += `\n🎉 PERMANENT WI-FI 5555 CONNECTION SUCCESSFUL!\n`;
                     saveConnectedIp(ipAddress);
                     refreshDevicesList();
                   } else {
-                    qrMdnsLog.innerHTML += `\n[FAIL] Kết nối vĩnh viễn cổng 5555 thất bại. Đang giữ kết nối tạm thời ở cổng ${connectIpPort}.\n`;
+                    qrMdnsLog.innerHTML += `\n[FAIL] Permanent port 5555 connection failed. Maintaining temporary connection on port ${connectIpPort}.\n`;
                     saveConnectedIp(ipAddress);
                     refreshDevicesList();
                   }
                 } else {
-                  qrMdnsLog.innerHTML += `\n[WARNING] Không thể chuyển sang cổng 5555. Đang giữ kết nối tạm thời ở cổng ${connectIpPort}.\n`;
+                  qrMdnsLog.innerHTML += `\n[WARNING] Cannot switch to port 5555. Maintaining temporary connection on port ${connectIpPort}.\n`;
                   saveConnectedIp(ipAddress);
                   refreshDevicesList();
                 }
               } else {
-                qrMdnsLog.innerHTML += `\n[FAIL] Kết nối lỗi!\n`;
+                qrMdnsLog.innerHTML += `\n[FAIL] Connection error!\n`;
               }
               return;
             }
@@ -550,12 +551,12 @@ async function performPairAndConnect(ipPort) {
       
       if (searchCount > 10) {
         clearInterval(connectInterval);
-        qrMdnsLog.innerHTML += `\n[WARNING] Không tự động quét được cổng kết nối.\nHãy vào kịch bản IP hoặc xem IP:Port trên đt để tự connect.\n`;
+        qrMdnsLog.innerHTML += `\n[WARNING] Could not automatically scan connect port.\nPlease use IP manual script or check IP:Port shown on phone to connect manually.\n`;
       }
     }, 2000);
     
   } else {
-    qrMdnsLog.innerHTML += `\n[FAIL] Ghép nối Thất Bại!\n`;
+    qrMdnsLog.innerHTML += `\n[FAIL] Pairing Failed!\n`;
   }
 }
 
@@ -596,8 +597,7 @@ window.api.executeCommand('ipconfig').then(res => {
 // Scan LAN networks for active IPs using ARP table
 btnScanLan.addEventListener('click', async (e) => {
   e.preventDefault();
-  btnScanLan.disabled = true;
-  btnScanLan.innerText = '🔍 Đang Quét...';
+  btnScanLan.    btnScanLan.innerText = '🔍 Scanning...';
   lanIpsList.innerHTML = '';
   lanDevicesContainer.style.display = 'block';
   
@@ -632,7 +632,7 @@ btnScanLan.addEventListener('click', async (e) => {
   }
   
   if (foundIps.size === 0) {
-    lanIpsList.innerHTML = '<span style="font-size: 11px; color: #f43f5e; padding: 4px 0;">Không phát hiện thấy IP động nào khác. Hãy đảm bảo điện thoại đang bật Wifi cùng mạng!</span>';
+    lanIpsList.innerHTML = '<span style="font-size: 11px; color: #f43f5e; padding: 4px 0;">No other dynamic IPs detected. Make sure your phone has Wi-Fi enabled on the same network!</span>';
   } else {
     foundIps.forEach(ip => {
       const chip = document.createElement('button');
@@ -652,7 +652,7 @@ btnScanLan.addEventListener('click', async (e) => {
         
         // Automatically copy the IP to the clipboard
         navigator.clipboard.writeText(ip);
-        appendTerminalLine(`[Hệ Thống] Đã tự động sao chép IP ${ip} vào Clipboard!`, 'success-line');
+        appendTerminalLine(`[System] Automatically copied IP ${ip} to clipboard!`, 'success-line');
         
         // Brief visual success animation
         chip.style.backgroundColor = 'var(--accent-success)';
@@ -670,26 +670,26 @@ btnScanLan.addEventListener('click', async (e) => {
   }
   
   btnScanLan.disabled = false;
-  btnScanLan.innerText = '🔍 Quét LAN';
+  btnScanLan.innerText = '🔍 LAN Scan';
 });
 
 // Scan active wireless debugging services via ADB mDNS auto-scanner
 btnScanMdns.addEventListener('click', async (e) => {
   e.preventDefault();
   btnScanMdns.disabled = true;
-  btnScanMdns.innerText = '📡 Đang Dò mDNS...';
+  btnScanMdns.innerText = '📡 Scanning mDNS...';
   lanIpsList.innerHTML = '';
-  lanScanTitle.innerText = 'Dịch vụ mDNS phát hiện (Click để tự động điền toàn bộ):';
+  lanScanTitle.innerText = 'mDNS Services Discovered (Click to auto-fill):';
   lanDevicesContainer.style.display = 'block';
   
-  appendTerminalLine('[mDNS] Đang thực hiện dò quét các thiết bị Android bật Wireless Debugging trong mạng...', 'system-line');
+  appendTerminalLine('[mDNS] Scanning for Android devices with Wireless Debugging enabled on the network...', 'system-line');
   
   const res = await window.api.executeCommand('adb mdns services');
   
   if (!res.success || res.stdout.trim() === '' || res.stdout.includes('No active services')) {
-    lanIpsList.innerHTML = '<span style="font-size: 11px; color: #f43f5e; padding: 4px 0;">Không tìm thấy dịch vụ mDNS nào đang hoạt động. Hãy đảm bảo Gỡ lỗi không dây đang bật trên điện thoại!</span>';
+    lanIpsList.innerHTML = '<span style="font-size: 11px; color: #f43f5e; padding: 4px 0;">No active mDNS services found. Make sure Wireless Debugging is enabled on the phone!</span>';
     btnScanMdns.disabled = false;
-    btnScanMdns.innerText = '📡 Dò Quét mDNS (Tự Động)';
+    btnScanMdns.innerText = '📡 Auto Scan mDNS';
     return;
   }
   
@@ -717,7 +717,7 @@ btnScanMdns.addEventListener('click', async (e) => {
         seenServices.add(uniqueKey);
         
         foundAny = true;
-        const typeLabel = isConnect ? 'Cổng Kết Nối (Connect)' : 'Cổng Ghép Nối (Pair)';
+        const typeLabel = isConnect ? 'Connect Port' : 'Pair Port';
         
         const chip = document.createElement('button');
         chip.className = 'badge';
@@ -743,10 +743,10 @@ btnScanMdns.addEventListener('click', async (e) => {
           wizIp.value = ip;
           if (isConnect) {
             wizConnectPort.value = port;
-            appendTerminalLine(`[mDNS] Đã tự động điền IP: ${ip} và Cổng Kết Nối (Connect Port): ${port}!`, 'success-line');
+            appendTerminalLine(`[mDNS] Auto-filled IP: ${ip} and Connect Port: ${port}!`, 'success-line');
           } else {
             wizPairPort.value = port;
-            appendTerminalLine(`[mDNS] Đã tự động điền IP: ${ip} và Cổng Ghép Nối (Pair Port): ${port}!`, 'success-line');
+            appendTerminalLine(`[mDNS] Auto-filled IP: ${ip} and Pair Port: ${port}!`, 'success-line');
           }
           updateWizardPlaceholders();
           
@@ -768,11 +768,11 @@ btnScanMdns.addEventListener('click', async (e) => {
   }
   
   if (!foundAny) {
-    lanIpsList.innerHTML = '<span style="font-size: 11px; color: #f43f5e; padding: 4px 0;">Không phát hiện thấy dịch vụ Gỡ lỗi không dây nào. Hãy mở màn hình Wireless Debugging trên điện thoại!</span>';
+    lanIpsList.innerHTML = '<span style="font-size: 11px; color: #f43f5e; padding: 4px 0;">No wireless debugging services detected. Open the Wireless Debugging screen on your phone!</span>';
   }
   
   btnScanMdns.disabled = false;
-  btnScanMdns.innerText = '📡 Dò Quét mDNS (Tự Động)';
+  btnScanMdns.innerText = '📡 Auto Scan mDNS';
 });
 
 // Execute command and stream output directly to a log element in real-time
@@ -782,7 +782,7 @@ function executeStreamingCommand(command, logElement) {
     let stdoutData = '';
     let stderrData = '';
     
-    logElement.innerHTML += `\n⚙️ <strong>Chạy:</strong> ${command}\n`;
+    logElement.innerHTML += `\n⚙️ <strong>Running:</strong> ${command}\n`;
     logElement.scrollTop = logElement.scrollHeight;
     
     const removeListener = window.api.onTerminalOutput(id, (payload) => {
@@ -808,7 +808,7 @@ function executeStreamingCommand(command, logElement) {
     
     window.api.runTerminalCommand(command, id).then(res => {
       if (!res.success) {
-        logElement.innerHTML += `<span style="color: #f43f5e">\n❌ Lỗi khởi chạy lệnh!</span>\n`;
+        logElement.innerHTML += `<span style="color: #f43f5e">\n❌ Failed to execute command!</span>\n`;
         removeListener();
         resolve({ success: false, stdout: '', stderr: 'Failed to spawn', code: -1 });
       }
@@ -824,7 +824,7 @@ btnRunWizard.addEventListener('click', async () => {
 
   // Validate inputs
   if (!ip) {
-    alert('Vui lòng nhập địa chỉ IP thiết bị!');
+    alert('Please enter the device IP address!');
     wizIp.focus();
     return;
   }
@@ -833,38 +833,38 @@ btnRunWizard.addEventListener('click', async () => {
   const hasConnectPort = connectPort;
   
   if (!hasPairInfo && !hasConnectPort) {
-    alert('Vui lòng điền thông tin để chạy:\n- Điền Cổng Ghép Nối & Mã Ghép Nối để thực hiện Ghép Nối (Pair)\n- HOẶC Điền Cổng Kết Nối để thực hiện Kết Nối (Connect)');
+    alert('Please enter required information:\n- Enter Pair Port & Pairing PIN to perform Pairing\n- OR Enter Connection Port to perform Connection');
     return;
   }
 
   btnRunWizard.disabled = true;
-  btnRunWizard.innerText = '⚙️ Đang chạy kịch bản...';
+  btnRunWizard.innerText = '⚙️ Running script...';
   
   // Clear steps styles
   for (let i = 1; i <= 5; i++) {
     const stepEl = document.getElementById(`step-${i}`);
     stepEl.className = 'step-progress-item';
-    stepEl.querySelector('.step-status').innerText = 'Đang chờ';
+    stepEl.querySelector('.step-status').innerText = 'Waiting';
   }
   
-  wizardLog.innerHTML = `[Bắt đầu] Khởi động kịch bản kết nối WiFi Debugging tuần tự...\n`;
+  wizardLog.innerHTML = `[Start] Initiating Wi-Fi Debugging sequential connection script...\n`;
   
   try {
     // -------------------------------------------------------------
     // STEP 1: Restart ADB server
     // -------------------------------------------------------------
-    setStepState(1, 'active', 'Đang chạy');
-    wizardLog.innerHTML += `[Bước 1] Khởi động lại máy chủ ADB...\n`;
+    setStepState(1, 'active', 'Running');
+    wizardLog.innerHTML += `[Step 1] Restarting ADB server...\n`;
     
     await executeStreamingCommand('adb kill-server', wizardLog);
     const res1 = await executeStreamingCommand('adb start-server', wizardLog);
     
     if (res1.success) {
-      setStepState(1, 'success', 'Thành công');
-      wizardLog.innerHTML += `[Bước 1] Khởi tạo ADB sạch sẽ.\n`;
+      setStepState(1, 'success', 'Success');
+      wizardLog.innerHTML += `[Step 1] Clean ADB initialization.\n`;
     } else {
-      setStepState(1, 'error', 'Thất bại');
-      throw new Error('Không thể khởi chạy máy chủ ADB');
+      setStepState(1, 'error', 'Failed');
+      throw new Error('Could not start ADB server');
     }
 
     // Wait 1 second
@@ -874,23 +874,23 @@ btnRunWizard.addEventListener('click', async () => {
     // STEP 2: ADB Pair
     // -------------------------------------------------------------
     if (hasPairInfo) {
-      setStepState(2, 'active', 'Đang chạy');
-      wizardLog.innerHTML += `[Bước 2] Tiến hành ghép nối thiết bị...\n`;
+      setStepState(2, 'active', 'Running');
+      wizardLog.innerHTML += `[Step 2] Pairing device...\n`;
       
       const res2 = await executeStreamingCommand(`adb pair ${ip}:${pairPort} ${pairCode}`, wizardLog);
       
       if (res2.success || res2.stdout.includes('Successfully paired') || res2.stdout.includes('already paired')) {
-        setStepState(2, 'success', 'Thành công');
-        wizardLog.innerHTML += `[Bước 2] Ghép nối THÀNH CÔNG.\n`;
+        setStepState(2, 'success', 'Success');
+        wizardLog.innerHTML += `[Step 2] Pairing SUCCESSFUL.\n`;
       } else {
         // Warning but non-blocking: The device might already be paired from a previous run!
-        setStepState(2, 'success', 'Đã Pair/Bỏ Qua');
-        wizardLog.innerHTML += `[Bước 2] Lưu ý: Ghép nối có thể đã thành công từ trước hoặc mã bị hết hạn. Tiếp tục bước kết nối...\n`;
+        setStepState(2, 'success', 'Paired/Skipped');
+        wizardLog.innerHTML += `[Step 2] Note: Pairing may have already succeeded or code expired. Proceeding to connect...\n`;
       }
       await new Promise(r => setTimeout(r, 1000));
     } else {
-      setStepState(2, 'success', 'Bỏ qua');
-      wizardLog.innerHTML += `[Bước 2] Bỏ qua bước Ghép Nối (Đã có thông tin kết nối trực tiếp).\n`;
+      setStepState(2, 'success', 'Skipped');
+      wizardLog.innerHTML += `[Step 2] Skipping pairing step (direct connection info provided).\n`;
     }
 
     // -------------------------------------------------------------
@@ -899,11 +899,11 @@ btnRunWizard.addEventListener('click', async () => {
     let cPort = connectPort;
     if (!cPort) {
       // Pause and prompt user in real-time to enter the Connect Port
-      const userInput = prompt("🎉 Ghép nối (Pair) thiết bị thành công!\n\nBây giờ hãy tắt hộp thoại ghép nối trên điện thoại để quay lại màn hình Gỡ lỗi không dây chính.\n\nHãy nhập Cổng Kết Nối (Connect Port) gồm 5 chữ số đang hiển thị tại đó:");
+      const userInput = prompt("🎉 Device pairing successful!\n\nNow close the pairing dialog on your phone to return to the main Wireless Debugging screen.\n\nEnter the 5-digit Connection Port shown there:");
       
       if (!userInput || userInput.trim() === '') {
-        setStepState(3, 'error', 'Hủy bởi người dùng');
-        throw new Error('Bạn đã hủy kịch bản kết nối do chưa nhập Cổng Kết Nối (Connect Port).');
+        setStepState(3, 'error', 'Cancelled by user');
+        throw new Error('You cancelled the connection script by not entering the Connection Port.');
       }
       
       cPort = userInput.trim();
@@ -911,17 +911,17 @@ btnRunWizard.addEventListener('click', async () => {
       updateWizardPlaceholders();
     }
 
-    setStepState(3, 'active', 'Đang chạy');
-    wizardLog.innerHTML += `[Bước 3] Thực hiện kết nối ban đầu qua cổng: ${cPort}...\n`;
+    setStepState(3, 'active', 'Running');
+    wizardLog.innerHTML += `[Step 3] Performing initial connection on port: ${cPort}...\n`;
     
     const res3 = await executeStreamingCommand(`adb connect ${ip}:${cPort}`, wizardLog);
     
     if (res3.success || res3.stdout.includes('connected to')) {
-      setStepState(3, 'success', 'Thành công');
-      wizardLog.innerHTML += `[Bước 3] Kết nối ban đầu THÀNH CÔNG.\n`;
+      setStepState(3, 'success', 'Success');
+      wizardLog.innerHTML += `[Step 3] Initial connection SUCCESSFUL.\n`;
     } else {
-      setStepState(3, 'error', 'Thất bại');
-      throw new Error('Kết nối thiết bị qua cổng kết nối thất bại!');
+      setStepState(3, 'error', 'Failed');
+      throw new Error('Connection via connection port failed!');
     }
 
     await new Promise(r => setTimeout(r, 1000));
@@ -929,35 +929,35 @@ btnRunWizard.addEventListener('click', async () => {
     // -------------------------------------------------------------
     // STEP 4: Switch to Port 5555
     // -------------------------------------------------------------
-    setStepState(4, 'active', 'Đang chạy');
-    wizardLog.innerHTML += `[Bước 4] Chuyển đổi sang cổng WiFi 5555...\n`;
+    setStepState(4, 'active', 'Running');
+    wizardLog.innerHTML += `[Step 4] Switching to Wi-Fi port 5555...\n`;
     
     const res4 = await executeStreamingCommand(`adb tcpip 5555`, wizardLog);
     
     if (res4.success) {
-      setStepState(4, 'success', 'Thành công');
-      wizardLog.innerHTML += `[Bước 4] Đã chuyển đổi điện thoại sang lắng nghe trên cổng 5555.\n`;
+      setStepState(4, 'success', 'Success');
+      wizardLog.innerHTML += `[Step 4] Phone configured to listen on port 5555.\n`;
     } else {
-      setStepState(4, 'error', 'Thất bại');
-      throw new Error('Không thể chuyển đổi thiết bị sang chế độ tcpip 5555!');
+      setStepState(4, 'error', 'Failed');
+      throw new Error('Could not switch device to tcpip port 5555!');
     }
 
     // Wait 2 seconds for device to re-register on port 5555
-    wizardLog.innerHTML += `[Chờ] Chờ 2 giây để điện thoại cấu hình lại cổng mạng...\n`;
+    wizardLog.innerHTML += `[Wait] Waiting 2 seconds for phone to reconfigure network port...\n`;
     await new Promise(r => setTimeout(r, 2000));
 
     // -------------------------------------------------------------
     // STEP 5: Final Reconnect to Port 5555
     // -------------------------------------------------------------
-    setStepState(5, 'active', 'Đang chạy');
-    wizardLog.innerHTML += `[Bước 5] Thực hiện kết nối cố định trên cổng chuẩn 5555...\n`;
+    setStepState(5, 'active', 'Running');
+    wizardLog.innerHTML += `[Step 5] Connecting permanently to standard port 5555...\n`;
     
     const res5 = await executeStreamingCommand(`adb connect ${ip}:5555`, wizardLog);
     
-    if (res5.success || res5.stdout.includes('connected to') || res5.stdout.includes('already connected')) {
-      setStepState(5, 'success', 'Thành công');
-      wizardLog.innerHTML += `\n🎉 KỊCH BẢN KẾT NỐI WIFI 5555 HOÀN TẤT THÀNH CÔNG VÀ VĨNH VIỄN!\n`;
-      wizardLog.innerHTML += `Bây giờ bạn có thể kết nối WiFi thoải mái ở cổng 5555 không cần Pair nữa!\n`;
+    if (res5.success || res5.stdout.includes('connected to') || finalConnRes.stdout.includes('already connected')) {
+      setStepState(5, 'success', 'Success');
+      wizardLog.innerHTML += `\n🎉 PERMANENT WI-FI 5555 CONNECTION SCRIPT COMPLETED SUCCESSFULLY!\n`;
+      wizardLog.innerHTML += `You can now connect via Wi-Fi on port 5555 without pairing again!\n`;
       
       // Save IP for auto connect
       saveConnectedIp(ip);
@@ -965,15 +965,15 @@ btnRunWizard.addEventListener('click', async () => {
       // Auto refresh devices
       refreshDevicesList();
     } else {
-      setStepState(5, 'error', 'Thất bại');
-      throw new Error('Kết nối cố định đến cổng 5555 thất bại!');
+      setStepState(5, 'error', 'Failed');
+      throw new Error('Permanent connection to port 5555 failed!');
     }
 
   } catch (error) {
-    wizardLog.innerHTML += `\n❌ LỖI KỊCH BẢN: ${error.message}\n`;
+    wizardLog.innerHTML += `\n❌ SCRIPT ERROR: ${error.message}\n`;
   } finally {
     btnRunWizard.disabled = false;
-    btnRunWizard.innerText = '🚀 Chạy Kịch Bản Kết Nối Tự Động';
+    btnRunWizard.innerText = '🚀 Run Auto Connection Script';
     checkAdbStatus();
   }
 });
@@ -998,7 +998,7 @@ terminalInput.addEventListener('keydown', (event) => {
 btnSendCmd.addEventListener('click', runTerminalCommandFromInput);
 
 btnClearTerminal.addEventListener('click', () => {
-  terminalScreen.innerHTML = '<div class="term-line system-line">[AeroScrcpy] Màn hình dòng lệnh đã được làm sạch.</div>';
+  terminalScreen.innerHTML = '<div class="term-line system-line">[WprScrcpy] Console cleared.</div>';
 });
 
 // Run command entered in input
@@ -1056,7 +1056,7 @@ async function executeShellCommand(command) {
 
   const res = await window.api.runTerminalCommand(processedCmd, id);
   if (!res.success) {
-    appendTerminalLine('Không thể chạy tiến trình phụ!', 'error-line');
+    appendTerminalLine('Could not start subprocess!', 'error-line');
     removeListener();
   }
 }
@@ -1081,7 +1081,7 @@ function appendSystemLogToTerminal(text) {
 // Device-specific settings persistence
 function loadDeviceSettings(id) {
   if (!id) return;
-  const saved = localStorage.getItem(`aero_device_settings_${id}`);
+  const saved = localStorage.getItem(`wpr_device_settings_${id}`);
   if (saved) {
     try {
       const settings = JSON.parse(saved);
@@ -1117,7 +1117,7 @@ function loadDeviceSettings(id) {
 
   // Load saved password specifically
   if (deviceSavedPassword) {
-    deviceSavedPassword.value = localStorage.getItem(`aero_device_password_${id}`) || '';
+    deviceSavedPassword.value = localStorage.getItem(`wpr_device_password_${id}`) || '';
   }
 
   // Update audio connection state in main process to synchronize the floating controller
@@ -1140,13 +1140,13 @@ function saveDeviceSettings(id) {
     record: optRecord.checked,
     turnScreenOff: optTurnScreenOff ? optTurnScreenOff.checked : false
   };
-  localStorage.setItem(`aero_device_settings_${id}`, JSON.stringify(settings));
+  localStorage.setItem(`wpr_device_settings_${id}`, JSON.stringify(settings));
 }
 
 // Automatically relaunch mirroring to apply audio/video settings dynamically
 async function relaunchScrcpy() {
   if (selectedDeviceId && isMirroringActive) {
-    appendTerminalLine(`[Hệ Thống] Đang khởi động lại phản chiếu để áp dụng cài đặt mới...`, 'system-line');
+    appendTerminalLine(`[System] Restarting mirror to apply new settings...`, 'system-line');
     // Terminate existing scrcpy instances
     await window.api.executeCommand('taskkill /F /IM scrcpy.exe');
     // Relaunch mirror after a brief delay
@@ -1189,13 +1189,14 @@ setTimeout(() => {
   if (deviceSavedPassword) {
     deviceSavedPassword.addEventListener('input', () => {
       if (selectedDeviceId) {
-        localStorage.setItem(`aero_device_password_${selectedDeviceId}`, deviceSavedPassword.value);
+        localStorage.setItem(`wpr_device_password_${selectedDeviceId}`, deviceSavedPassword.value);
       }
     });
   }
 }, 1000);
 
 // Function to select active device in UI for quick control actions
+// Load settings specifically for this device
 function selectDevice(id, name) {
   selectedDeviceId = id;
   selectedDeviceName = name;
@@ -1228,10 +1229,10 @@ ctrlButtons.forEach(btn => {
     btn.addEventListener('click', async (e) => {
       e.preventDefault();
       if (!selectedDeviceId) {
-        alert('Vui lòng click chọn 1 điện thoại kết nối ở danh sách bên trái trước!');
+        alert('Please click to select a connected phone from the list on the left first!');
         return;
       }
-      appendTerminalLine(`[Điều Khiển] Gửi phím ${btn.innerText} (key: ${key}) đến thiết bị ${selectedDeviceId}...`, 'info-line');
+      appendTerminalLine(`[Control] Sending key ${btn.innerText} (key: ${key}) to device ${selectedDeviceId}...`, 'info-line');
       await window.api.executeCommand(`adb -s ${selectedDeviceId} shell input keyevent ${key}`);
     });
   }
@@ -1241,10 +1242,10 @@ if (btnUnlock) {
   btnUnlock.addEventListener('click', async (e) => {
     e.preventDefault();
     if (!selectedDeviceId) {
-      alert('Vui lòng chọn 1 thiết bị!');
+      alert('Please select a device!');
       return;
     }
-    appendTerminalLine(`[Điều Khiển] Gửi thao tác vuốt lên để mở khóa điện thoại ${selectedDeviceId}...`, 'info-line');
+    appendTerminalLine(`[Control] Sending swipe up to unlock phone ${selectedDeviceId}...`, 'info-line');
     // Simulate a swipe gesture from bottom to middle of screen
     await window.api.executeCommand(`adb -s ${selectedDeviceId} shell input swipe 500 1500 500 500 350`);
   });
@@ -1254,10 +1255,10 @@ if (btnScreenOff) {
   btnScreenOff.addEventListener('click', async (e) => {
     e.preventDefault();
     if (!selectedDeviceId) {
-      alert('Vui lòng chọn 1 thiết bị!');
+      alert('Please select a device!');
       return;
     }
-    appendTerminalLine(`[Điều Khiển] Tắt màn hình vật lý điện thoại ${selectedDeviceId} (Mirror vẫn hoạt động)...`, 'info-line');
+    appendTerminalLine(`[Control] Turning off physical screen of device ${selectedDeviceId} (mirror remains active)...`, 'info-line');
     // Keyevent 223 turns screen off (SLEEP)
     await window.api.executeCommand(`adb -s ${selectedDeviceId} shell input keyevent 223`);
   });
@@ -1267,10 +1268,10 @@ if (btnScreenshot) {
   btnScreenshot.addEventListener('click', async (e) => {
     e.preventDefault();
     if (!selectedDeviceId) {
-      alert('Vui lòng chọn 1 thiết bị!');
+      alert('Please select a device!');
       return;
     }
-    appendTerminalLine(`[Điều Khiển] Chụp ảnh màn hình trên điện thoại ${selectedDeviceId}...`, 'info-line');
+    appendTerminalLine(`[Control] Taking screenshot on phone ${selectedDeviceId}...`, 'info-line');
     // Keyevent 120 snaps screenshot
     await window.api.executeCommand(`adb -s ${selectedDeviceId} shell input keyevent 120`);
   });
@@ -1278,22 +1279,22 @@ if (btnScreenshot) {
 
 // Auto-connect previously saved devices on startup
 async function autoConnectSavedDevices() {
-  const saved = localStorage.getItem('aero_saved_ips');
+  const saved = localStorage.getItem('wpr_saved_ips');
   if (!saved) return;
   
   try {
     const ipList = JSON.parse(saved);
     if (!Array.isArray(ipList) || ipList.length === 0) return;
     
-    appendTerminalLine(`[Tự Động] Phát hiện ${ipList.length} thiết bị đã từng kết nối. Đang thử kết nối lại...`, 'info-line');
+    appendTerminalLine(`[Auto] Detected ${ipList.length} previously connected device(s). Reconnecting...`, 'info-line');
     
     for (const ip of ipList) {
-      appendTerminalLine(`[Tự Động] Đang kết nối lại: adb connect ${ip}:5555`, 'system-line');
+      appendTerminalLine(`[Auto] Reconnecting: adb connect ${ip}:5555`, 'system-line');
       const res = await window.api.executeCommand(`adb connect ${ip}:5555`);
       if (res.success && res.stdout.includes('connected to')) {
-        appendTerminalLine(`[Tự Động] Kết nối lại thành công đến ${ip}:5555!`, 'success-line');
+        appendTerminalLine(`[Auto] Successfully reconnected to ${ip}:5555!`, 'success-line');
       } else {
-        appendTerminalLine(`[Tự Động] Thử kết nối đến ${ip}:5555 chưa thành công (thiết bị có thể đang ngoại tuyến).`, 'error-line');
+        appendTerminalLine(`[Auto] Failed to reconnect to ${ip}:5555 (device may be offline).`, 'error-line');
       }
     }
     // Refresh devices list after trying all reconnections
@@ -1307,14 +1308,14 @@ async function autoConnectSavedDevices() {
 function saveConnectedIp(ip) {
   if (!ip) return;
   try {
-    const saved = localStorage.getItem('aero_saved_ips');
+    const saved = localStorage.getItem('wpr_saved_ips');
     let ipList = saved ? JSON.parse(saved) : [];
     if (!Array.isArray(ipList)) ipList = [];
     
     if (!ipList.includes(ip)) {
       ipList.push(ip);
-      localStorage.setItem('aero_saved_ips', JSON.stringify(ipList));
-      appendTerminalLine(`[Hệ Thống] Đã lưu IP ${ip} vào bộ nhớ để tự động kết nối lần sau.`, 'success-line');
+      localStorage.setItem('wpr_saved_ips', JSON.stringify(ipList));
+      appendTerminalLine(`[System] Saved IP ${ip} for auto-connection on next launch.`, 'success-line');
     }
   } catch (err) {
     console.error('Error saving IP:', err);
@@ -1328,7 +1329,7 @@ quickIpButtons.forEach(btn => {
     e.preventDefault();
     const ip = wizIp.value.trim();
     if (!ip || ip === '192.168.1.' || ip.endsWith('.')) {
-      alert('Vui lòng chọn hoặc điền đầy đủ địa chỉ IP của điện thoại ở ô nhập phía trên trước!');
+      alert('Please enter a valid phone IP address in the field above first!');
       wizIp.focus();
       return;
     }
@@ -1340,19 +1341,19 @@ quickIpButtons.forEach(btn => {
     const template = btn.getAttribute('data-template');
     
     if (template.includes('{connect_port}') && !connectPort) {
-      alert('Vui lòng điền Cổng Kết Nối (Connect Port) ở ô nhập phía trên trước!\n\nMẹo: Bạn có thể bấm "Dò Quét mDNS" để tự động dò quét cổng động và điền nhanh!');
+      alert('Please enter the Connection Port first!\n\nTip: You can use "mDNS Scan" to automatically discover and auto-fill the port.');
       wizConnectPort.focus();
       return;
     }
     
     if (template.includes('{pair_port}') && !pairPort) {
-      alert('Vui lòng điền Cổng Ghép Nối (Pair Port) ở ô nhập phía trên trước!');
+      alert('Please enter the Pair Port first!');
       wizPairPort.focus();
       return;
     }
     
     if (template.includes('{pair_code}') && !pairCode) {
-      alert('Vui lòng điền Mã Ghép Nối (Pairing Code) ở ô nhập phía trên trước!');
+      alert('Please enter the Pairing PIN first!');
       wizPairCode.focus();
       return;
     }
@@ -1363,16 +1364,16 @@ quickIpButtons.forEach(btn => {
                             .replace(/{pair_code}/g, pairCode);
     
     // Clear previous logs
-    wizardLog.innerHTML = `[Bắt đầu] Đang chạy lệnh nhanh theo IP...\n`;
+    wizardLog.innerHTML = `[Start] Running quick command by IP...\n`;
     
     btn.disabled = true;
     const originalText = btn.innerText;
-    btn.innerText = '⚙️ Đang chạy...';
+    btn.innerText = '⚙️ Running...';
     
     try {
       await executeStreamingCommand(command, wizardLog);
     } catch (err) {
-      wizardLog.innerHTML += `\n❌ Lỗi: ${err.message}\n`;
+      wizardLog.innerHTML += `\n❌ Error: ${err.message}\n`;
     } finally {
       btn.disabled = false;
       btn.innerText = originalText;
@@ -1384,10 +1385,17 @@ quickIpButtons.forEach(btn => {
 
 // Bind click to toggle float controller panel
 if (btnToggleFloatBar) {
-  btnToggleFloatBar.addEventListener('click', (e) => {
+  btnToggleFloatBar.addEventListener('click', async (e) => {
     e.preventDefault();
+    if (!isMirroringActive) {
+      alert("Please start mirroring a device first before opening the overlay controller!");
+      return;
+    }
     if (window.api && window.api.toggleControllerWindow) {
-      window.api.toggleControllerWindow();
+      const res = await window.api.toggleControllerWindow();
+      if (!res.success && res.error) {
+        alert(res.error);
+      }
     }
   });
 }
@@ -1396,15 +1404,15 @@ if (btnToggleFloatBar) {
 if (window.api && window.api.onShowPasswordPrompt) {
   window.api.onShowPasswordPrompt(() => {
     if (selectedDeviceId) {
-      const savedPass = localStorage.getItem(`aero_device_password_${selectedDeviceId}`) || '';
+      const savedPass = localStorage.getItem(`wpr_device_password_${selectedDeviceId}`) || '';
       if (savedPass) {
-        appendTerminalLine(`[Điều Khiển] Đang tự động nhập mật khẩu để mở khóa...`, 'info-line');
+        appendTerminalLine(`[Control] Auto-entering password to unlock...`, 'info-line');
         window.api.executeControllerKey('input-password:' + savedPass);
       } else {
-        alert("Bạn chưa lưu Mật khẩu / PIN điện thoại!\n\nHãy chọn thiết bị, sau đó nhập Mật khẩu vào ô 'Mật khẩu / PIN điện thoại' ở tab Thiết Bị Kết Nối, rồi ấn F5 để tự mở khóa.");
+        alert("You haven't saved a Phone Password / PIN!\n\nPlease select the device, enter the password in the PIN / Password field under Settings, then press F5 to auto-unlock.");
       }
     } else {
-      alert("Chưa chọn thiết bị để mở khóa!");
+      alert("No device selected to unlock!");
     }
   });
 }
@@ -1413,6 +1421,13 @@ if (window.api && window.api.onShowPasswordPrompt) {
 if (window.api && window.api.onTerminalOutputSystem) {
   window.api.onTerminalOutputSystem((payload) => {
     appendTerminalLine(payload.data, 'system-line');
+  });
+}
+
+// Listen to mirror status changes from main process
+if (window.api && window.api.onMirrorStatusChanged) {
+  window.api.onMirrorStatusChanged((active) => {
+    isMirroringActive = active;
   });
 }
 

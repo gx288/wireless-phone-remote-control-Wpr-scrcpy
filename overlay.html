@@ -226,7 +226,7 @@
 <div id="sidebar-wrap">
 
   <!-- Collapsed tab (shown when sidebar hidden) -->
-  <div id="mini-tab" title="Mở panel (F12)">
+  <div id="mini-tab" title="Open panel (F12)">
     <span id="mini-tab-arrow">▶ ▶</span>
   </div>
 
@@ -235,36 +235,36 @@
     <div class="btn-list" id="btn-list">
 
       <!-- Group 1: Navigation -->
-      <button class="ctrl-btn" data-key="3"   data-tooltip="Trang chủ (F1)">🏠<span class="f-key">F1</span></button>
-      <button class="ctrl-btn" data-key="4"   data-tooltip="Quay lại (F2)">⬅<span class="f-key">F2</span></button>
-      <button class="ctrl-btn" data-key="187" data-tooltip="Gần đây (F3)">▢<span class="f-key">F3</span></button>
+      <button class="ctrl-btn" data-key="3"   data-tooltip="Home screen (F1)">🏠<span class="f-key">F1</span></button>
+      <button class="ctrl-btn" data-key="4"   data-tooltip="Back button (F2)">⬅<span class="f-key">F2</span></button>
+      <button class="ctrl-btn" data-key="187" data-tooltip="Recent apps (F3)">▢<span class="f-key">F3</span></button>
 
       <div class="divider"></div>
 
       <!-- Group 2: Screen & Input -->
-      <button class="ctrl-btn" data-key="rotate"    data-tooltip="Xoay màn hình (F4)">🔄<span class="f-key">F4</span></button>
-      <button class="ctrl-btn" data-key="password"  data-tooltip="Mật khẩu / PIN (F5)">🔑<span class="f-key">F5</span></button>
-      <button class="ctrl-btn" data-key="screen-off" id="btn-screen-off" data-tooltip="Tắt/Mở màn hình (F6)">🌙<span class="f-key">F6</span></button>
+      <button class="ctrl-btn" data-key="rotate"    data-tooltip="Rotate screen (F4)">🔄<span class="f-key">F4</span></button>
+      <button class="ctrl-btn" data-key="password"  data-tooltip="Input PIN/Password (F5)">🔑<span class="f-key">F5</span></button>
+      <button class="ctrl-btn" data-key="screen-off" id="btn-screen-off" data-tooltip="Turn off physical screen (F6)">🌙<span class="f-key">F6</span></button>
 
       <div class="divider"></div>
 
       <!-- Group 3: Volume & Power -->
-      <button class="ctrl-btn" data-key="26" data-tooltip="Nguồn (F7)">🔌<span class="f-key">F7</span></button>
-      <button class="ctrl-btn" data-key="25" data-tooltip="Giảm âm lượng (F8)">🔉<span class="f-key">F8</span></button>
-      <button class="ctrl-btn" data-key="24" data-tooltip="Tăng âm lượng (F9)">🔊<span class="f-key">F9</span></button>
+      <button class="ctrl-btn" data-key="26" data-tooltip="Power button (F7)">🔌<span class="f-key">F7</span></button>
+      <button class="ctrl-btn" data-key="25" data-tooltip="Volume down (F8)">🔉<span class="f-key">F8</span></button>
+      <button class="ctrl-btn" data-key="24" data-tooltip="Volume up (F9)">🔊<span class="f-key">F9</span></button>
 
       <div class="divider"></div>
 
       <!-- Group 4: Media & Capture -->
-      <button class="ctrl-btn" id="btn-toggle-audio" data-tooltip="Âm thanh PC (F10)">🎧<span class="f-key">F10</span></button>
-      <button class="ctrl-btn" id="btn-record" data-key="record" data-tooltip="Ghi màn hình (F11)">⏺<span class="f-key">F11</span></button>
-      <button class="ctrl-btn" data-key="screenshot" data-tooltip="Chụp ảnh màn hình">📸</button>
+      <button class="ctrl-btn" id="btn-toggle-audio" data-tooltip="Toggle PC Audio (F10)">🎧<span class="f-key">F10</span></button>
+      <button class="ctrl-btn" id="btn-record" data-key="record" data-tooltip="Record screen (F11)">⏺<span class="f-key">F11</span></button>
+      <button class="ctrl-btn" data-key="screenshot" data-tooltip="Take screenshot">📸</button>
 
       <div class="divider"></div>
 
       <!-- Group 5: Window Controls -->
-      <button class="ctrl-btn" id="btn-mirror-pin" data-tooltip="Ghim Mirror luôn trên cùng">📌</button>
-      <button class="ctrl-btn btn-collapse" id="btn-collapse" data-tooltip="Thu nhỏ panel (F12)">◀ ẩn</button>
+      <button class="ctrl-btn" id="btn-mirror-pin" data-tooltip="Pin Mirror on Top">📌</button>
+      <button class="ctrl-btn btn-collapse" id="btn-collapse" data-tooltip="Collapse panel (F12)">◀ hide</button>
     </div>
   </div>
 
@@ -286,7 +286,7 @@
      Mouse passthrough: default = pass through.
      When mouse enters sidebar-wrap → capture.
      When mouse leaves → pass through again.
-  ───────────────────────────────────────── */
+   ───────────────────────────────────────── */
   sidebarWrap.addEventListener('mouseenter', () => {
     window.api.setIgnoreMouseEvents(false);
   });
@@ -301,7 +301,7 @@
 
   /* ─────────────────────────────────────────
      Collapse / Expand sidebar
-  ───────────────────────────────────────── */
+   ───────────────────────────────────────── */
   function collapseSidebar() {
     isSidebarOpen = false;
     sidebar.classList.add('hidden');
@@ -330,13 +330,13 @@
 
   /* ─────────────────────────────────────────
      Audio state sync
-  ───────────────────────────────────────── */
+   ───────────────────────────────────────── */
   function updateAudioUI(enabled) {
     isAudioForward = enabled;
     const btn = document.getElementById('btn-toggle-audio');
     if (!btn) return;
     btn.classList.toggle('audio-active', enabled);
-    btn.setAttribute('data-tooltip', `Âm thanh PC: ${enabled ? '🔵 BẬT' : '⚪ TẮT'} (F10)`);
+    btn.setAttribute('data-tooltip', `PC Audio: ${enabled ? '🔵 ON' : '⚪ OFF'} (F10)`);
   }
 
   if (window.api.getAudioState) window.api.getAudioState().then(updateAudioUI);
@@ -344,7 +344,7 @@
 
   /* ─────────────────────────────────────────
      Action dispatcher
-  ───────────────────────────────────────── */
+   ───────────────────────────────────────── */
   function triggerAction(action) {
     switch (action) {
       case 'password':
@@ -358,7 +358,7 @@
         const btn = document.getElementById('btn-screen-off');
         if (btn) {
           btn.classList.toggle('screen-off-active', screenOffState);
-          btn.setAttribute('data-tooltip', screenOffState ? 'Mở màn hình (F6)' : 'Tắt/Mở màn hình (F6)');
+          btn.setAttribute('data-tooltip', screenOffState ? 'Turn screen on (F6)' : 'Turn off physical screen (F6)');
           btn.textContent = ''; // clear
           btn.innerHTML = (screenOffState ? '☀️' : '🌙') + '<span class="f-key">F6</span>';
         }
@@ -370,7 +370,7 @@
         const btn = document.getElementById('btn-record');
         if (btn) {
           btn.classList.toggle('recording', isRecording);
-          btn.setAttribute('data-tooltip', isRecording ? 'Dừng ghi hình (F11)' : 'Ghi màn hình (F11)');
+          btn.setAttribute('data-tooltip', isRecording ? 'Stop recording (F11)' : 'Record screen (F11)');
           btn.innerHTML = (isRecording ? '⏹' : '⏺') + '<span class="f-key">F11</span>';
         }
         window.api.executeControllerKey(isRecording ? 'record-start' : 'record-stop');
@@ -388,13 +388,13 @@
 
   /* ─────────────────────────────────────────
      Mirror always-on-top pin
-  ───────────────────────────────────────── */
+   ───────────────────────────────────────── */
   document.getElementById('btn-mirror-pin').addEventListener('click', () => {
     isMirrorPinned = !isMirrorPinned;
     const btn = document.getElementById('btn-mirror-pin');
     btn.classList.toggle('btn-active', isMirrorPinned);
     btn.setAttribute('data-tooltip',
-      isMirrorPinned ? 'Mirror: 📌 Đang ghim trên cùng' : 'Ghim Mirror luôn trên cùng');
+      isMirrorPinned ? 'Mirror: 📌 Pinned on Top' : 'Pin Mirror on Top');
     window.api.setMirrorAlwaysOnTop(isMirrorPinned);
   });
 

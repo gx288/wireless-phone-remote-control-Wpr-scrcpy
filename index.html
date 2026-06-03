@@ -20,10 +20,10 @@
       </div>
       <nav class="nav-menu">
         <button class="nav-btn active" data-tab="devices-tab">
-          <span class="icon">📱</span> Thiết Bị & Phản Chiếu
+          <span class="icon">📱</span> Devices & Mirroring
         </button>
         <button class="nav-btn" data-tab="wifi-tab">
-          <span class="icon">📡</span> Kết Nối Không Dây
+          <span class="icon">📡</span> Wireless Connection
         </button>
         <button class="nav-btn" data-tab="terminal-tab">
           <span class="icon">💻</span> Terminal CMD
@@ -32,11 +32,11 @@
       <div class="sidebar-footer">
         <div class="status-indicator">
           <span class="dot running"></span>
-          <span>ADB: <span id="adb-service-status">Đang chạy</span></span>
+          <span>ADB: <span id="adb-service-status">Running</span></span>
         </div>
         <div class="quick-server-actions">
-          <button id="btn-kill-server" title="Tắt máy chủ ADB">Kill Server</button>
-          <button id="btn-start-server" title="Bật máy chủ ADB">Start Server</button>
+          <button id="btn-kill-server" title="Stop ADB Server">Kill Server</button>
+          <button id="btn-start-server" title="Start ADB Server">Start Server</button>
         </div>
       </div>
     </aside>
@@ -46,18 +46,18 @@
       <!-- Header Bar -->
       <header class="main-header">
         <div class="header-info">
-          <h2 id="current-tab-title">Thiết Bị Kết Nối</h2>
-          <p id="current-tab-desc">Quản lý phản chiếu màn hình và các thiết bị Android đang hoạt động</p>
+          <h2 id="current-tab-title">Connected Devices</h2>
+          <p id="current-tab-desc">Manage screen mirroring and active Android devices</p>
         </div>
         <div class="global-actions" style="display: flex; gap: 8px; align-items: center;">
-          <button id="btn-toggle-float-bar" class="btn btn-secondary" title="Ẩn/Hiện overlay panel (Alt+Shift+S)">
+          <button id="btn-toggle-float-bar" class="btn btn-secondary" title="Toggle overlay panel (Alt+Shift+S)">
             <span class="icon">📱</span> Overlay
           </button>
           <button id="btn-refresh-devices" class="btn btn-primary btn-glow">
-            <span class="icon">🔄</span> Làm Mới
+            <span class="icon">🔄</span> Refresh
           </button>
-          <button id="btn-quit-app" title="Thoát hoàn toàn, kill scrcpy &amp; adb" style="background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3); color: #f87171; border-radius: 8px; padding: 8px 14px; cursor: pointer; font-size: 13px; font-weight: 600; display:flex; align-items:center; gap:6px; transition: background 0.15s;" onmouseenter="this.style.background='rgba(239,68,68,0.25)'" onmouseleave="this.style.background='rgba(239,68,68,0.12)'">
-            ⏻ Thoát
+          <button id="btn-quit-app" title="Quit application, terminate scrcpy &amp; adb" style="background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3); color: #f87171; border-radius: 8px; padding: 8px 14px; cursor: pointer; font-size: 13px; font-weight: 600; display:flex; align-items:center; gap:6px; transition: background 0.15s;" onmouseenter="this.style.background='rgba(239,68,68,0.25)'" onmouseleave="this.style.background='rgba(239,68,68,0.12)'">
+            ⏻ Quit
           </button>
         </div>
       </header>
@@ -71,14 +71,14 @@
             <!-- Left: Device List -->
             <div class="card device-list-card">
               <div class="card-header">
-                <h3>Danh Sách Thiết Bị Đang Kết Nối</h3>
-                <span class="badge" id="device-count">0 thiết bị</span>
+                <h3>Connected Devices List</h3>
+                <span class="badge" id="device-count">0 devices</span>
               </div>
               <div class="card-body">
                 <div id="no-devices-msg" class="empty-state">
                   <div class="empty-icon">🔌</div>
-                  <h4>Chưa phát hiện thiết bị nào</h4>
-                  <p>Hãy kết nối điện thoại qua USB hoặc bật WiFi Debugging để bắt đầu.</p>
+                  <h4>No devices detected</h4>
+                  <p>Connect your phone via USB or enable Wireless Debugging to start.</p>
                 </div>
                 <div id="devices-list" class="devices-list-wrapper">
                   <!-- Devices will be injected dynamically -->
@@ -90,13 +90,13 @@
             <div class="right-column-wrapper" style="display: flex; flex-direction: column; gap: 20px; height: 100%; overflow-y: auto; padding-right: 4px;">
               <div class="card config-card" style="flex-shrink: 0;">
                 <div class="card-header">
-                  <h3>Cấu Hình Phản Chiếu (Scrcpy)</h3>
+                  <h3>Mirror Configuration (Scrcpy)</h3>
                 </div>
                 <div class="card-body">
                   <div class="form-group">
-                    <label for="scrcpy-resolution">Độ phân giải tối đa (Max Size)</label>
+                    <label for="scrcpy-resolution">Max Resolution (Max Size)</label>
                     <select id="scrcpy-resolution">
-                      <option value="0">Mặc định (Không giới hạn)</option>
+                      <option value="0">Default (Unlimited)</option>
                       <option value="1920">1920p (Full HD+)</option>
                       <option value="1080" selected>1080p (Full HD)</option>
                       <option value="720">720p (HD)</option>
@@ -106,9 +106,9 @@
                   
                   <div class="form-row">
                     <div class="form-group">
-                      <label for="scrcpy-bitrate">Tốc độ truyền (Bitrate)</label>
+                      <label for="scrcpy-bitrate">Video Bitrate</label>
                       <select id="scrcpy-bitrate">
-                        <option value="0">Mặc định</option>
+                        <option value="0">Default</option>
                         <option value="16000000">16 Mbps</option>
                         <option value="8000000" selected>8 Mbps</option>
                         <option value="4000000">4 Mbps</option>
@@ -116,9 +116,9 @@
                       </select>
                     </div>
                     <div class="form-group">
-                      <label for="scrcpy-fps">Tốc độ khung hình (Max FPS)</label>
+                      <label for="scrcpy-fps">Frame Rate (Max FPS)</label>
                       <select id="scrcpy-fps">
-                        <option value="0">Mặc định</option>
+                        <option value="0">Default</option>
                         <option value="90">90 FPS</option>
                         <option value="60" selected>60 FPS</option>
                         <option value="30">30 FPS</option>
@@ -129,10 +129,10 @@
                   <div class="form-row" style="margin-bottom: 12px; display: block;">
                     <div class="form-group" style="width: 100%;">
                       <label for="device-saved-password" style="display: flex; justify-content: space-between;">
-                        <span>Mật khẩu / PIN điện thoại (Nhấn F5)</span>
-                        <span style="font-size: 11px; color: var(--text-muted); font-weight: normal;">(Tự động lưu)</span>
+                        <span>Phone Password / PIN (Press F5)</span>
+                        <span style="font-size: 11px; color: var(--text-muted); font-weight: normal;">(Auto saved)</span>
                       </label>
-                      <input type="password" id="device-saved-password" placeholder="Nhập PIN / Mật khẩu để tiện mở khóa bằng phím F5" style="width: 100%; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 6px; color: #fff; font-size: 13px; font-family: monospace;">
+                      <input type="password" id="device-saved-password" placeholder="Enter PIN / Password to unlock with F5 key" style="width: 100%; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 6px; color: #fff; font-size: 13px; font-family: monospace;">
                     </div>
                   </div>
 
@@ -140,32 +140,32 @@
                     <label class="checkbox-container">
                       <input type="checkbox" id="opt-always-on-top" checked>
                       <span class="checkmark"></span>
-                      Luôn hiển thị trên cùng (Always on Top)
+                      Always on Top
                     </label>
                     <label class="checkbox-container">
                       <input type="checkbox" id="opt-stay-awake" checked>
                       <span class="checkmark"></span>
-                      Giữ màn hình điện thoại luôn sáng (Stay Awake)
+                      Keep phone screen awake (Stay Awake)
                     </label>
                     <label class="checkbox-container">
                       <input type="checkbox" id="opt-audio-forward">
                       <span class="checkmark"></span>
-                      Truyền âm thanh điện thoại sang PC (Audio)
+                      Forward phone audio to PC (Audio)
                     </label>
                     <label class="checkbox-container">
                       <input type="checkbox" id="opt-turn-screen-off">
                       <span class="checkmark"></span>
-                      Tắt màn hình vật lý của ĐT (Màn PC vẫn sáng)
+                      Turn off phone screen (PC mirror stays on)
                     </label>
                     <label class="checkbox-container">
                       <input type="checkbox" id="opt-show-touches">
                       <span class="checkmark"></span>
-                      Hiển thị các vị trí chạm trên màn hình
+                      Show touch interactions on screen
                     </label>
                     <label class="checkbox-container">
                       <input type="checkbox" id="opt-record">
                       <span class="checkmark"></span>
-                      Ghi hình màn hình khi mở phản chiếu
+                      Record screen session when mirroring
                     </label>
                   </div>
                 </div>
@@ -182,30 +182,30 @@
             <!-- LEFT COLUMN: QR CODE PAIRING -->
             <div class="card qr-card" style="display: flex; flex-direction: column; overflow-y: auto; height: 100%;">
               <div class="card-header" style="padding-bottom: 8px; border-bottom: 1px dashed var(--glass-border);">
-                <h3>Ghép Nối Mã QR (Android 11+)</h3>
+                <h3>QR Code Pairing (Android 11+)</h3>
               </div>
               <div class="card-body centered" style="display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 10px; padding-top: 15px;">
                 <div class="qr-box" style="margin-bottom: 2px;">
-                  <img id="qr-image" src="" alt="Mã QR Gỡ Lỗi Wi-Fi" class="qr-img">
-                  <div id="qr-loading" class="qr-loading-spinner">Tải mã QR...</div>
+                  <img id="qr-image" src="" alt="Wi-Fi Debugging QR Code" class="qr-img">
+                  <div id="qr-loading" class="qr-loading-spinner">Loading QR Code...</div>
                 </div>
                 <div class="qr-details" style="width: 100%; display: flex; flex-direction: column; gap: 6px;">
                   <div class="detail-item" style="display: flex; justify-content: space-between; font-size: 13px; background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--glass-border);">
-                    <strong>Service:</strong> <span id="qr-service-name" style="font-family: var(--font-mono); color: var(--accent-color);">aero-******</span>
+                    <strong>Service:</strong> <span id="qr-service-name" style="font-family: var(--font-mono); color: var(--accent-color);">wpr-******</span>
                   </div>
                   <div class="detail-item" style="display: flex; justify-content: space-between; font-size: 13px; background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--glass-border);">
-                    <strong>Mã PIN:</strong> <span id="qr-pairing-code" style="font-family: var(--font-mono); color: var(--accent-color); font-weight: bold; letter-spacing: 1px;">******</span>
+                    <strong>Pairing PIN:</strong> <span id="qr-pairing-code" style="font-family: var(--font-mono); color: var(--accent-color); font-weight: bold; letter-spacing: 1px;">******</span>
                   </div>
                 </div>
                 <div style="display: flex; gap: 10px; width: 100%; justify-content: center; margin-top: 2px;">
-                  <button id="btn-regenerate-qr" class="btn btn-secondary" style="flex: 1; padding: 10px 5px; font-size: 12px; font-weight: 600;">Đổi Mã QR</button>
-                  <button id="btn-open-settings-qr" class="btn btn-secondary" style="flex: 1; padding: 10px 5px; font-size: 12px; font-weight: 600;" title="Yêu cầu cắm USB ban đầu">📱 Cài Đặt ĐT</button>
+                  <button id="btn-regenerate-qr" class="btn btn-secondary" style="flex: 1; padding: 10px 5px; font-size: 12px; font-weight: 600;">Change QR Code</button>
+                  <button id="btn-open-settings-qr" class="btn btn-secondary" style="flex: 1; padding: 10px 5px; font-size: 12px; font-weight: 600;" title="Requires initial USB connection">📱 Phone Settings</button>
                 </div>
                 
                 <div class="status-console-card" style="width: 100%; text-align: left; margin-top: 5px;">
-                  <h4 style="font-size: 12px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; letter-spacing: 0.5px;">Phát Hiện Thiết Bị (mDNS)</h4>
+                  <h4 style="font-size: 12px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; letter-spacing: 0.5px;">mDNS Discovered Devices</h4>
                   <div class="console-box" id="qr-mdns-log" style="height: 125px; font-size: 11px; padding: 8px; border-radius: 6px; background: #000; border: 1px solid var(--glass-border); color: #10b981; font-family: var(--font-mono); overflow-y: auto; white-space: pre-wrap; line-height: 1.4;">
-                    [System] Đang chờ bạn quét QR Code...
+                    [System] Waiting for QR Code scan...
                   </div>
                 </div>
               </div>
@@ -218,54 +218,54 @@
               <div style="display: flex; flex-direction: column; gap: 20px; overflow-y: auto; height: 100%;">
                 <div class="card quick-ip-cmds-card" style="flex-shrink: 0;">
                   <div class="card-header" style="border-bottom: 1px dashed var(--glass-border); padding-bottom: 10px;">
-                    <h3>Địa Chỉ IP & Lệnh Wi-Fi</h3>
+                    <h3>IP Address & Wi-Fi Commands</h3>
                   </div>
                   <div class="card-body" style="display: flex; flex-direction: column; gap: 12px; padding-top: 15px;">
                     <div class="form-group" style="margin-bottom: 0;">
-                      <label for="wiz-ip" style="font-weight: 600; color: var(--accent-color); font-size: 13px;">IP Điện thoại (Ví dụ: 192.168.1.5)</label>
+                      <label for="wiz-ip" style="font-weight: 600; color: var(--accent-color); font-size: 13px;">Phone IP Address (e.g. 192.168.1.5)</label>
                       <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px;">
                         <input type="text" id="wiz-ip" placeholder="192.168.1.5" style="flex: 1; min-width: 100px; padding: 8px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); color: #fff; font-family: var(--font-mono);">
                       </div>
                       <div style="display: flex; gap: 8px; margin-top: 8px; width: 100%;">
-                        <button id="btn-scan-lan" class="btn btn-secondary" style="flex: 1; white-space: nowrap; padding: 8px 10px; font-size: 12px; font-weight: 600;">🔍 Quét LAN</button>
-                        <button id="btn-scan-mdns" class="btn btn-primary btn-glow" style="flex: 1; white-space: nowrap; padding: 8px 10px; font-size: 12px; font-weight: 600;">📡 Dò mDNS</button>
+                        <button id="btn-scan-lan" class="btn btn-secondary" style="flex: 1; white-space: nowrap; padding: 8px 10px; font-size: 12px; font-weight: 600;">🔍 LAN Scan</button>
+                        <button id="btn-scan-mdns" class="btn btn-primary btn-glow" style="flex: 1; white-space: nowrap; padding: 8px 10px; font-size: 12px; font-weight: 600;">📡 mDNS Scan</button>
                       </div>
                       <div id="lan-devices-container" style="margin-top: 10px; display: none;">
-                        <span style="font-size: 10px; color: var(--text-muted);" id="lan-scan-title">Thiết bị phát hiện (Click để điền IP):</span>
+                        <span style="font-size: 10px; color: var(--text-muted);" id="lan-scan-title">Discovered Devices (Click to copy IP):</span>
                         <div id="lan-ips-list" style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px;"></div>
                       </div>
                     </div>
 
                     <div class="quick-ip-grid" style="display: flex; flex-direction: column; gap: 6px; margin-top: 4px;">
-                      <button class="btn btn-secondary quick-ip-btn" data-template="adb connect {ip}:5555" title="Kết nối trực tiếp đến cổng chuẩn 5555" style="text-align: left; font-size: 12px; padding: 10px; font-weight: bold; border: 1px solid var(--accent-color); background: rgba(56, 189, 248, 0.06);">⚡ Kết Nối Cố Định (IP:5555)</button>
-                      <button class="btn btn-secondary quick-ip-btn" data-template="adb connect {ip}:{connect_port}" title="Kết nối trực tiếp đến cổng động" style="text-align: left; font-size: 12px; padding: 10px;">⚡ Kết Nối Cổng Động (IP:Port)</button>
-                      <button class="btn btn-secondary quick-ip-btn" data-template="adb disconnect {ip}:5555" title="Ngắt kết nối Wi-Fi" style="text-align: left; font-size: 12px; padding: 10px;">Ngắt Kết Nối IP:5555</button>
-                      <button class="btn btn-secondary quick-ip-btn" data-template="adb tcpip 5555" title="Chuyển đổi cổng" style="text-align: left; font-size: 12px; padding: 10px;">Cấu Hình Lại Cổng (tcpip 5555)</button>
+                      <button class="btn btn-secondary quick-ip-btn" data-template="adb connect {ip}:5555" title="Connect directly to default port 5555" style="text-align: left; font-size: 12px; padding: 10px; font-weight: bold; border: 1px solid var(--accent-color); background: rgba(56, 189, 248, 0.06);">⚡ Connect Standard Port (IP:5555)</button>
+                      <button class="btn btn-secondary quick-ip-btn" data-template="adb connect {ip}:{connect_port}" title="Connect directly to dynamic port" style="text-align: left; font-size: 12px; padding: 10px;">⚡ Connect Dynamic Port (IP:Port)</button>
+                      <button class="btn btn-secondary quick-ip-btn" data-template="adb disconnect {ip}:5555" title="Disconnect Wi-Fi connection" style="text-align: left; font-size: 12px; padding: 10px;">Disconnect IP:5555</button>
+                      <button class="btn btn-secondary quick-ip-btn" data-template="adb tcpip 5555" title="Reset target port to 5555" style="text-align: left; font-size: 12px; padding: 10px;">Configure Port (tcpip 5555)</button>
                     </div>
                   </div>
                 </div>
 
                 <div class="card input-wizard-card" style="flex-shrink: 0; margin-bottom: 10px;">
                   <div class="card-header" style="border-bottom: 1px dashed var(--glass-border); padding-bottom: 10px;">
-                    <h3>Ghép Nối Thủ Công</h3>
+                    <h3>Manual Pairing & Connect</h3>
                   </div>
                   <div class="card-body" style="display: flex; flex-direction: column; gap: 10px; padding-top: 15px;">
                     <div class="form-group">
-                      <label for="wiz-connect-port" style="font-size: 11px;">Cổng Kết Nối (Connect Port)</label>
+                      <label for="wiz-connect-port" style="font-size: 11px;">Connection Port</label>
                       <input type="text" id="wiz-connect-port" placeholder="42951" style="width: 100%; padding: 8px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); color: #fff; font-family: var(--font-mono);">
                     </div>
                     <div class="form-row" style="display: flex; gap: 10px;">
                       <div class="form-group" style="flex: 1;">
-                        <label for="wiz-pair-port" style="font-size: 11px;">Cổng Ghép (Pair Port)</label>
+                        <label for="wiz-pair-port" style="font-size: 11px;">Pair Port</label>
                         <input type="text" id="wiz-pair-port" placeholder="38953" style="width: 100%; padding: 8px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); color: #fff; font-family: var(--font-mono);">
                       </div>
                       <div class="form-group" style="flex: 1;">
-                        <label for="wiz-pair-code" style="font-size: 11px;">PIN Ghép (6 Số)</label>
+                        <label for="wiz-pair-code" style="font-size: 11px;">Pairing PIN (6 digits)</label>
                         <input type="text" id="wiz-pair-code" placeholder="123456" style="width: 100%; padding: 8px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); color: #fff; font-family: var(--font-mono);">
                       </div>
                     </div>
                     <div class="wizard-actions" style="display: flex; flex-direction: column; gap: 8px; margin-top: 5px;">
-                      <button id="btn-run-wizard" class="btn btn-primary btn-glow btn-block" style="padding: 10px; font-size: 12px; font-weight: bold;">🚀 Chạy Kịch Bản Kết Nối Tự Động</button>
+                      <button id="btn-run-wizard" class="btn btn-primary btn-glow btn-block" style="padding: 10px; font-size: 12px; font-weight: bold;">🚀 Run Auto Connection Script</button>
                     </div>
                   </div>
                 </div>
@@ -274,7 +274,7 @@
               <!-- SUB-COLUMN 2: WIZARD STEPS PROGRESS & DETAILED LOG -->
               <div class="card progress-wizard-card" style="display: flex; flex-direction: column; height: 100%; overflow: hidden;">
                 <div class="card-header" style="border-bottom: 1px dashed var(--glass-border); padding-bottom: 10px;">
-                  <h3>Kịch Bản Chạy Tự Động</h3>
+                  <h3>Auto Connection Progress</h3>
                 </div>
                 <div class="card-body" style="display: flex; flex-direction: column; gap: 12px; padding-top: 15px; height: calc(100% - 40px); overflow-y: auto;">
                   <div class="steps-progress-wrapper" style="display: flex; flex-direction: column; gap: 6px;">
@@ -282,48 +282,48 @@
                     <div class="step-progress-item" id="step-1" style="display: flex; align-items: center; gap: 8px; font-size: 11.5px; background: rgba(255,255,255,0.01); padding: 6px 10px; border-radius: 6px; border: 1px solid var(--glass-border);">
                       <div class="step-icon" style="width: 20px; height: 20px; border-radius: 50%; background: var(--bg-tertiary); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 10px;">1</div>
                       <div class="step-info" style="flex: 1;">
-                        <h4 style="font-size: 11.5px; font-weight: 600;">Làm sạch ADB</h4>
+                        <h4 style="font-size: 11.5px; font-weight: 600;">1. Clean ADB connections</h4>
                       </div>
-                      <div class="step-status" style="font-size: 10.5px; color: var(--text-muted);">Chờ...</div>
+                      <div class="step-status" style="font-size: 10.5px; color: var(--text-muted);">Waiting...</div>
                     </div>
                     <!-- Step 2 -->
                     <div class="step-progress-item" id="step-2" style="display: flex; align-items: center; gap: 8px; font-size: 11.5px; background: rgba(255,255,255,0.01); padding: 6px 10px; border-radius: 6px; border: 1px solid var(--glass-border);">
                       <div class="step-icon" style="width: 20px; height: 20px; border-radius: 50%; background: var(--bg-tertiary); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 10px;">2</div>
                       <div class="step-info" style="flex: 1;">
-                        <h4 style="font-size: 11.5px; font-weight: 600;">Ghép nối (Pair)</h4>
+                        <h4 style="font-size: 11.5px; font-weight: 600;">2. Pair with device</h4>
                       </div>
-                      <div class="step-status" style="font-size: 10.5px; color: var(--text-muted);">Chờ...</div>
+                      <div class="step-status" style="font-size: 10.5px; color: var(--text-muted);">Waiting...</div>
                     </div>
                     <!-- Step 3 -->
                     <div class="step-progress-item" id="step-3" style="display: flex; align-items: center; gap: 8px; font-size: 11.5px; background: rgba(255,255,255,0.01); padding: 6px 10px; border-radius: 6px; border: 1px solid var(--glass-border);">
                       <div class="step-icon" style="width: 20px; height: 20px; border-radius: 50%; background: var(--bg-tertiary); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 10px;">3</div>
                       <div class="step-info" style="flex: 1;">
-                        <h4 style="font-size: 11.5px; font-weight: 600;">Kết nối (Connect)</h4>
+                        <h4 style="font-size: 11.5px; font-weight: 600;">3. Connect to IP:Port</h4>
                       </div>
-                      <div class="step-status" style="font-size: 10.5px; color: var(--text-muted);">Chờ...</div>
+                      <div class="step-status" style="font-size: 10.5px; color: var(--text-muted);">Waiting...</div>
                     </div>
                     <!-- Step 4 -->
                     <div class="step-progress-item" id="step-4" style="display: flex; align-items: center; gap: 8px; font-size: 11.5px; background: rgba(255,255,255,0.01); padding: 6px 10px; border-radius: 6px; border: 1px solid var(--glass-border);">
                       <div class="step-icon" style="width: 20px; height: 20px; border-radius: 50%; background: var(--bg-tertiary); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 10px;">4</div>
                       <div class="step-info" style="flex: 1;">
-                        <h4 style="font-size: 11.5px; font-weight: 600;">Đổi Cổng 5555</h4>
+                        <h4 style="font-size: 11.5px; font-weight: 600;">4. Switch to Port 5555</h4>
                       </div>
-                      <div class="step-status" style="font-size: 10.5px; color: var(--text-muted);">Chờ...</div>
+                      <div class="step-status" style="font-size: 10.5px; color: var(--text-muted);">Waiting...</div>
                     </div>
                     <!-- Step 5 -->
                     <div class="step-progress-item" id="step-5" style="display: flex; align-items: center; gap: 8px; font-size: 11.5px; background: rgba(255,255,255,0.01); padding: 6px 10px; border-radius: 6px; border: 1px solid var(--glass-border);">
                       <div class="step-icon" style="width: 20px; height: 20px; border-radius: 50%; background: var(--bg-tertiary); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 10px;">5</div>
                       <div class="step-info" style="flex: 1;">
-                        <h4 style="font-size: 11.5px; font-weight: 600;">Kết nối cố định</h4>
+                        <h4 style="font-size: 11.5px; font-weight: 600;">5. Connect permanently</h4>
                       </div>
-                      <div class="step-status" style="font-size: 10.5px; color: var(--text-muted);">Chờ...</div>
+                      <div class="step-status" style="font-size: 10.5px; color: var(--text-muted);">Waiting...</div>
                     </div>
                   </div>
 
                   <div class="wizard-log-area" style="display: flex; flex-direction: column; flex-grow: 1; min-height: 100px; height: 160px; margin-top: 5px;">
-                    <h4 style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 5px;">Nhật Ký Chi Tiết</h4>
+                    <h4 style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 5px;">Execution Log</h4>
                     <div class="console-box" id="wizard-log" style="flex-grow: 1; height: 100%; font-size: 11px; padding: 8px; border-radius: 6px; background: #000; border: 1px solid var(--glass-border); color: #38bdf8; font-family: var(--font-mono); overflow-y: auto; white-space: pre-wrap; line-height: 1.4;">
-                      [System] Điền đầy đủ thông tin bên trái và bấm Chạy Kịch Bản để bắt đầu.
+                      [System] Enter information on the left and click Run to begin.
                     </div>
                   </div>
                 </div>
@@ -338,18 +338,18 @@
           <div class="terminal-layout">
             <div class="card terminal-output-card">
               <div class="card-header">
-                <h3>Console Dòng Lệnh</h3>
-                <button id="btn-clear-terminal" class="btn btn-secondary btn-sm">Xóa Màn Hình</button>
+                <h3>ADB Terminal Console</h3>
+                <button id="btn-clear-terminal" class="btn btn-secondary btn-sm">Clear Screen</button>
               </div>
               <div class="card-body no-padding">
                 <div class="terminal-log-screen" id="terminal-screen">
-                  <div class="term-line system-line">[AeroScrcpy] Khởi tạo tab Terminal thành công. Bạn có thể gõ bất cứ lệnh adb hoặc cmd nào.</div>
-                  <div class="term-line info-line">Gợi ý: Hãy thử bấm các Lệnh Nhanh ở bên phải để chạy nhanh các tác vụ phổ biến.</div>
+                  <div class="term-line system-line">[WprScrcpy] Terminal initialized. Enter adb or shell commands.</div>
+                  <div class="term-line info-line">Tip: Click the Quick Commands on the right to execute common tasks.</div>
                 </div>
                 <div class="terminal-input-wrapper">
                   <span class="prompt">$</span>
-                  <input type="text" id="terminal-input" placeholder="Gõ lệnh ở đây (ví dụ: adb devices, adb shell getprop...) và ấn Enter..." autofocus>
-                  <button id="btn-send-cmd" class="btn btn-primary">Gửi</button>
+                  <input type="text" id="terminal-input" placeholder="Type command here (e.g., adb devices, adb shell getprop...) and press Enter..." autofocus>
+                  <button id="btn-send-cmd" class="btn btn-primary">Send</button>
                 </div>
               </div>
             </div>
@@ -357,21 +357,21 @@
             <!-- Quick Snippets -->
             <div class="card quick-snippets-card">
               <div class="card-header">
-                <h3>Lệnh Cấu Hình Nhanh</h3>
+                <h3>Quick Commands</h3>
               </div>
               <div class="card-body">
                 <div class="snippets-grid">
-                  <button class="snippet-btn" data-cmd="adb devices">📱 Liệt Kê Thiết Bị Connected</button>
-                  <button class="snippet-btn" data-cmd="adb shell getprop ro.product.model">🔍 Xem Tên Điện Thoại</button>
-                  <button class="snippet-btn" data-cmd="adb shell dumpsys battery">🔋 Kiểm Tra Trạng Thái Pin</button>
-                  <button class="snippet-btn" data-cmd="adb shell wm size">🖥️ Kiểm Tra Độ Phân Giải</button>
-                  <button class="snippet-btn" data-cmd="adb disconnect">🔌 Ngắt Kết Nối Tất Cả (Disconnect)</button>
-                  <button class="snippet-btn" data-cmd="adb mdns cleanup">🧹 Dọn Dẹp Kết Nối mDNS (Cleanup)</button>
-                  <button class="snippet-btn" data-cmd="adb kill-server">⚠️ Tắt Phục Vụ (Kill ADB)</button>
-                  <button class="snippet-btn" data-cmd="adb start-server">✅ Bật Phục Vụ (Start ADB)</button>
-                  <button class="snippet-btn" data-cmd="adb reboot">🔄 Khởi Động Lại Điện Thoại</button>
-                  <button class="snippet-btn" data-cmd="adb shell screencap -p /sdcard/screenshot.png">📸 Chụp Ảnh Màn Hình</button>
-                  <button class="snippet-btn" data-cmd="adb shell top -m 5 -n 1">📊 Xem 5 Tiến Trình Ngốn CPU Nhất</button>
+                  <button class="snippet-btn" data-cmd="adb devices">📱 List Connected Devices</button>
+                  <button class="snippet-btn" data-cmd="adb shell getprop ro.product.model">🔍 Get Phone Model</button>
+                  <button class="snippet-btn" data-cmd="adb shell dumpsys battery">🔋 Check Battery Status</button>
+                  <button class="snippet-btn" data-cmd="adb shell wm size">🖥️ Check Screen Resolution</button>
+                  <button class="snippet-btn" data-cmd="adb disconnect">🔌 Disconnect All Devices</button>
+                  <button class="snippet-btn" data-cmd="adb mdns cleanup">🧹 mDNS Connection Cleanup</button>
+                  <button class="snippet-btn" data-cmd="adb kill-server">⚠️ Kill ADB Server</button>
+                  <button class="snippet-btn" data-cmd="adb start-server">✅ Start ADB Server</button>
+                  <button class="snippet-btn" data-cmd="adb reboot">🔄 Reboot Phone</button>
+                  <button class="snippet-btn" data-cmd="adb shell screencap -p /sdcard/screenshot.png">📸 Take Screenshot</button>
+                  <button class="snippet-btn" data-cmd="adb shell top -m 5 -n 1">📊 View Top 5 CPU Processes</button>
                 </div>
               </div>
             </div>
