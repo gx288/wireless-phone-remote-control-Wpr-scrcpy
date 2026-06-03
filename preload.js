@@ -6,6 +6,8 @@ contextBridge.exposeInMainWorld('api', {
   startScrcpy:         (args)           => ipcRenderer.invoke('start-scrcpy', args),
   runTerminalCommand:  (command, id)    => ipcRenderer.invoke('run-terminal-command', { command, id }),
   generateQR:          (text)           => ipcRenderer.invoke('generate-qr', text),
+  showMirror:          ()               => ipcRenderer.invoke('show-mirror'),
+
 
   // ── Device ───────────────────────────────────────────────────────────────
   setSelectedDevice:   (deviceId)       => ipcRenderer.invoke('set-selected-device', deviceId),

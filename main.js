@@ -104,15 +104,7 @@ function createWindow() {
     }
   });
 
-  let resizeTimeout;
-  mainWindow.on('resize', () => {
-    clearTimeout(resizeTimeout);
-    resizeTimeout = setTimeout(() => {
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.invalidate();
-      }
-    }, 100);
-  });
+
 }
 
 // ─── Overlay window ───────────────────────────────────────────────────────────
@@ -257,7 +249,7 @@ function registerFKeys() {
     F1: '3', F2: '4', F3: '187',
     F4: 'rotate', F5: 'password', F6: 'screen-off',
     F7: '26', F8: '25', F9: '24',
-    F10: 'audio-toggle', F11: 'record-toggle'
+    F10: 'audio-toggle', F11: 'show-mirror'
   };
 
   for (const [key, action] of Object.entries(actions)) {
@@ -391,11 +383,13 @@ ipcMain.handle('start-scrcpy', async (event, args) => {
       resetInactivityTimer();
 
       proc.on('exit', () => {
-        isMirrorActive = false;
         spawnedPids = spawnedPids.filter(p => p !== proc.pid);
         resetInactivityTimer();
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send('mirror-status-changed', false);
+        if (spawnedPids.length === 0) {
+          isMirrorActive = false;
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('mirror-status-changed', false);
+          }
         }
       });
 
@@ -474,6 +468,18 @@ ipcMain.handle('set-mirror-always-on-top', (event, pinned) => {
     isMirrorPinned = pinned;
     const arg = pinned ? '--pin' : '--unpin';
     exec(`"${BOUNDS_EXE}" ${arg}`, { windowsHide: true }, () => {
+      resolve({ success: true });
+    });
+  });
+});
+
+// ─── IPC: Wake / Show scrcpy mirror window ───────────────────────────────────
+ipcMain.handle('show-mirror', () => {
+  return new Promise(resolve => {
+    // Bring window to top and send Alt+r (Scrcpy native shortcut to reset/restart the capture and decoder stream instantly)
+    // Alt+r is perfect for waking up the video rendering stream when screen wakes up!
+    const psCommand = `powershell -Command "$wshell = New-Object -ComObject wscript.shell; if ($wshell.AppActivate('DeviceMirrorSession')) { Start-Sleep -m 150; $wshell.SendKeys('%r') }"`;
+    exec(psCommand, { windowsHide: true }, () => {
       resolve({ success: true });
     });
   });

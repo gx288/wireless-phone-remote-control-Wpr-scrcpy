@@ -57,6 +57,7 @@ const btnSendCmd = document.getElementById('btn-send-cmd');
 const btnClearTerminal = document.getElementById('btn-clear-terminal');
 const snippetButtons = document.querySelectorAll('.snippet-btn');
 const btnQuitApp = document.getElementById('btn-quit-app');
+const termSelectDevice = document.getElementById('term-select-device');
 
 // --- Tab Details Map ---
 const tabDetails = {
@@ -175,6 +176,10 @@ async function refreshDevicesList() {
   const res = await window.api.executeCommand('adb devices');
   devicesList.innerHTML = '';
   
+  if (termSelectDevice) {
+    termSelectDevice.innerHTML = '<option value="">-- No active selection --</option>';
+  }
+  
   if (!res.success) {
     noDevicesMsg.style.display = 'flex';
     deviceCountBadge.innerText = '0 devices';
@@ -221,6 +226,18 @@ async function refreshDevicesList() {
     // Render placeholders
     devices.forEach((dev, idx) => {
       renderDeviceItem(dev, idx);
+      
+      // Populate Terminal dropdown
+      if (termSelectDevice) {
+        const opt = document.createElement('option');
+        opt.value = dev.id;
+        opt.innerText = `${dev.model || 'Device'} (${dev.id})`;
+        if (selectedDeviceId === dev.id) {
+          opt.selected = true;
+        }
+        termSelectDevice.appendChild(opt);
+      }
+      
       // Fetch async device human name
       fetchDeviceModel(dev.id, idx);
     });
@@ -232,8 +249,8 @@ async function refreshDevicesList() {
         selectDevice(firstDev.id, firstDev.model);
         const firstCard = document.getElementById('device-item-0');
         if (firstCard) {
-          firstCard.style.border = '1px solid var(--accent-color)';
-          firstCard.style.backgroundColor = 'rgba(56, 189, 248, 0.05)';
+          firstCard.style.border = '1px solid rgba(136, 19, 55, 0.35)';
+          firstCard.style.backgroundColor = 'rgba(136, 19, 55, 0.03)';
         }
       }, 1200);
     }
@@ -247,6 +264,13 @@ function renderDeviceItem(dev, index) {
   const isOnline = dev.status === 'device';
   const statusClass = isOnline ? 'online' : 'unauthorized';
   const statusLabel = isOnline ? 'Active' : dev.status;
+  const isWifi = dev.id.includes(':') || dev.id.includes('._tcp') || dev.id.startsWith('adb-');
+  
+  const forgetButtonHtml = isWifi ? `
+    <button class="btn btn-secondary btn-glow" id="btn-forget-${index}" title="Forget device history (Disconnect)" style="margin-right: 6px; padding: 6px 10px; color: var(--accent-error); border-color: rgba(239, 68, 68, 0.2); background: rgba(239, 68, 68, 0.03);">
+      🗑️
+    </button>
+  ` : '';
 
   const item = document.createElement('div');
   item.className = 'device-item';
@@ -260,7 +284,8 @@ function renderDeviceItem(dev, index) {
         <span class="device-item-status-pill ${statusClass}">${statusLabel}</span>
       </div>
     </div>
-    <div class="device-item-right">
+    <div class="device-item-right" style="display: flex; align-items: center;">
+      ${forgetButtonHtml}
       <button class="btn btn-primary btn-glow" id="btn-mirror-${index}" ${!isOnline ? 'disabled' : ''}>
         ⚡ Mirror
       </button>
@@ -272,7 +297,7 @@ function renderDeviceItem(dev, index) {
   // Highlight card and select device on click
   item.style.cursor = 'pointer';
   item.addEventListener('click', (e) => {
-    if (e.target.id && e.target.id.startsWith('btn-mirror')) return;
+    if (e.target.id && (e.target.id.startsWith('btn-mirror') || e.target.id.startsWith('btn-forget'))) return;
     selectDevice(dev.id, dev.model);
     
     // Update active highlight style
@@ -280,8 +305,8 @@ function renderDeviceItem(dev, index) {
       el.style.border = '1px solid var(--glass-border)';
       el.style.backgroundColor = 'rgba(30, 41, 59, 0.4)';
     });
-    item.style.border = '1px solid var(--accent-color)';
-    item.style.backgroundColor = 'rgba(56, 189, 248, 0.05)';
+    item.style.border = '1px solid rgba(136, 19, 55, 0.35)';
+    item.style.backgroundColor = 'rgba(136, 19, 55, 0.03)';
   });
   
   const mirrorBtn = item.querySelector(`#btn-mirror-${index}`);
@@ -289,6 +314,34 @@ function renderDeviceItem(dev, index) {
     e.stopPropagation(); // Avoid triggering card selection click
     startScrcpyMirror(dev.id);
   });
+
+  if (isWifi) {
+    const forgetBtn = item.querySelector(`#btn-forget-${index}`);
+    forgetBtn.addEventListener('click', async (e) => {
+      e.stopPropagation(); // Avoid triggering card selection click
+      
+      const ip = dev.id.split(':')[0];
+      appendTerminalLine(`[System] Disconnecting and forgetting IP: ${ip}`, 'info-line');
+      
+      await window.api.executeCommand(`adb disconnect ${dev.id}`);
+      
+      // Clean from lists
+      ['wpr_saved_ips', 'aero_saved_ips'].forEach(key => {
+        const saved = localStorage.getItem(key);
+        if (saved) {
+          try {
+            let ipList = JSON.parse(saved);
+            if (Array.isArray(ipList)) {
+              ipList = ipList.filter(item => item !== ip && item !== dev.id);
+              localStorage.setItem(key, JSON.stringify(ipList));
+            }
+          } catch (_) {}
+        }
+      });
+      
+      refreshDevicesList();
+    });
+  }
 }
 
 async function fetchDeviceModel(id, index) {
@@ -311,6 +364,14 @@ async function fetchDeviceModel(id, index) {
   
   // Save in local state
   devices[index].model = modelName;
+
+  // Update option label in Terminal selector dropdown
+  if (termSelectDevice) {
+    const opt = Array.from(termSelectDevice.options).find(o => o.value === id);
+    if (opt) {
+      opt.innerText = `${modelName} (${id})`;
+    }
+  }
 }
 
 // Start Scrcpy Command Builder
@@ -518,7 +579,7 @@ async function performPairAndConnect(ipPort) {
                 const ipAddress = ipMatch[1];
                 qrMdnsLog.innerHTML += `\n[ADB] Connection successful. Switching permanent port to 5555 (tcpip 5555)...\n`;
                 
-                const tcpipRes = await executeStreamingCommand(`adb tcpip 5555`, qrMdnsLog);
+                const tcpipRes = await executeStreamingCommand(`adb -s ${connectIpPort} tcpip 5555`, qrMdnsLog);
                 if (tcpipRes.success) {
                   qrMdnsLog.innerHTML += `\n[Wait] Waiting 2 seconds for phone to reconfigure network port...\n`;
                   await new Promise(r => setTimeout(r, 2000));
@@ -597,7 +658,8 @@ window.api.executeCommand('ipconfig').then(res => {
 // Scan LAN networks for active IPs using ARP table
 btnScanLan.addEventListener('click', async (e) => {
   e.preventDefault();
-  btnScanLan.    btnScanLan.innerText = '🔍 Scanning...';
+  btnScanLan.disabled = true;
+  btnScanLan.innerText = '🔍 Scanning...';
   lanIpsList.innerHTML = '';
   lanDevicesContainer.style.display = 'block';
   
@@ -639,8 +701,8 @@ btnScanLan.addEventListener('click', async (e) => {
       chip.className = 'badge';
       chip.style.cursor = 'pointer';
       chip.style.margin = '2px';
-      chip.style.border = '1px solid var(--accent-color)';
-      chip.style.backgroundColor = 'rgba(56, 189, 248, 0.08)';
+      chip.style.border = '1px solid rgba(136, 19, 55, 0.35)';
+      chip.style.backgroundColor = 'rgba(136, 19, 55, 0.03)';
       chip.style.color = 'var(--accent-color)';
       chip.style.fontFamily = 'var(--font-mono)';
       chip.innerText = ip;
@@ -659,7 +721,7 @@ btnScanLan.addEventListener('click', async (e) => {
         chip.style.color = '#000';
         chip.style.borderColor = 'var(--accent-success)';
         setTimeout(() => {
-          chip.style.backgroundColor = 'rgba(56, 189, 248, 0.08)';
+          chip.style.backgroundColor = 'rgba(136, 19, 55, 0.03)';
           chip.style.color = 'var(--accent-color)';
           chip.style.borderColor = 'var(--accent-color)';
         }, 1500);
@@ -725,7 +787,7 @@ btnScanMdns.addEventListener('click', async (e) => {
         chip.style.margin = '4px';
         chip.style.padding = '8px 12px';
         chip.style.border = isConnect ? '1.5px solid var(--accent-color)' : '1px dashed var(--accent-muted)';
-        chip.style.backgroundColor = isConnect ? 'rgba(56, 189, 248, 0.15)' : 'rgba(255, 255, 255, 0.05)';
+        chip.style.backgroundColor = isConnect ? 'rgba(136, 19, 55, 0.05)' : 'rgba(255, 255, 255, 0.05)';
         chip.style.color = '#fff';
         chip.style.fontFamily = 'var(--font-mono)';
         chip.style.display = 'inline-flex';
@@ -757,7 +819,7 @@ btnScanMdns.addEventListener('click', async (e) => {
           chip.style.backgroundColor = 'var(--accent-success)';
           chip.style.borderColor = 'var(--accent-success)';
           setTimeout(() => {
-            chip.style.backgroundColor = isConnect ? 'rgba(56, 189, 248, 0.15)' : 'rgba(255, 255, 255, 0.05)';
+            chip.style.backgroundColor = isConnect ? 'rgba(136, 19, 55, 0.05)' : 'rgba(255, 255, 255, 0.05)';
             chip.style.borderColor = isConnect ? 'var(--accent-color)' : 'var(--accent-muted)';
           }, 1500);
         });
@@ -932,7 +994,7 @@ btnRunWizard.addEventListener('click', async () => {
     setStepState(4, 'active', 'Running');
     wizardLog.innerHTML += `[Step 4] Switching to Wi-Fi port 5555...\n`;
     
-    const res4 = await executeStreamingCommand(`adb tcpip 5555`, wizardLog);
+    const res4 = await executeStreamingCommand(`adb -s ${ip}:${cPort} tcpip 5555`, wizardLog);
     
     if (res4.success) {
       setStepState(4, 'success', 'Success');
@@ -989,9 +1051,27 @@ function setStepState(stepNum, className, label) {
 // ==========================================
 // 6. INTERACTIVE TERMINAL (TAB 4)
 // ==========================================
+let terminalHistory = [];
+let terminalHistoryIndex = -1;
+
 terminalInput.addEventListener('keydown', (event) => {
   if (event.key === 'Enter') {
     runTerminalCommandFromInput();
+  } else if (event.key === 'ArrowUp') {
+    event.preventDefault();
+    if (terminalHistory.length > 0 && terminalHistoryIndex < terminalHistory.length - 1) {
+      terminalHistoryIndex++;
+      terminalInput.value = terminalHistory[terminalHistory.length - 1 - terminalHistoryIndex];
+    }
+  } else if (event.key === 'ArrowDown') {
+    event.preventDefault();
+    if (terminalHistoryIndex > 0) {
+      terminalHistoryIndex--;
+      terminalInput.value = terminalHistory[terminalHistory.length - 1 - terminalHistoryIndex];
+    } else if (terminalHistoryIndex === 0) {
+      terminalHistoryIndex = -1;
+      terminalInput.value = '';
+    }
   }
 });
 
@@ -1005,6 +1085,9 @@ btnClearTerminal.addEventListener('click', () => {
 async function runTerminalCommandFromInput() {
   const rawCmd = terminalInput.value.trim();
   if (rawCmd === '') return;
+
+  terminalHistory.push(rawCmd);
+  terminalHistoryIndex = -1;
 
   terminalInput.value = '';
   executeShellCommand(rawCmd);
@@ -1037,351 +1120,391 @@ async function executeShellCommand(command) {
     }
   }
 
-  appendTerminalLine(processedCmd, 'input-line');
+    appendTerminalLine(processedCmd, 'input-line');
 
-  const id = Math.random().toString(36).substring(7);
-  
-  // Set up live listeners for output streaming
-  const removeListener = window.api.onTerminalOutput(id, (payload) => {
-    if (payload.type === 'stdout') {
-      appendTerminalLine(payload.data, 'output-line');
-    } else if (payload.type === 'stderr') {
-      appendTerminalLine(payload.data, 'error-line');
-    } else if (payload.type === 'exit') {
-      removeListener();
-      // Scroll to bottom
-      terminalScreen.scrollTop = terminalScreen.scrollHeight;
-    }
-  });
-
-  const res = await window.api.runTerminalCommand(processedCmd, id);
-  if (!res.success) {
-    appendTerminalLine('Could not start subprocess!', 'error-line');
-    removeListener();
-  }
-}
-
-function appendTerminalLine(text, className) {
-  // Create clean formatted line
-  const line = document.createElement('div');
-  line.className = `term-line ${className}`;
-  line.innerText = text;
-  
-  terminalScreen.appendChild(line);
-  
-  // Scroll to bottom
-  terminalScreen.scrollTop = terminalScreen.scrollHeight;
-}
-
-// Helper to write lines to Terminal console from system components
-function appendSystemLogToTerminal(text) {
-  appendTerminalLine(`[System] ${text}`, 'system-line');
-}
-
-// Device-specific settings persistence
-function loadDeviceSettings(id) {
-  if (!id) return;
-  const saved = localStorage.getItem(`wpr_device_settings_${id}`);
-  if (saved) {
-    try {
-      const settings = JSON.parse(saved);
-      if (settings.resolution !== undefined) scrcpyResolution.value = settings.resolution;
-      if (settings.bitrate !== undefined) scrcpyBitrate.value = settings.bitrate;
-      if (settings.fps !== undefined) scrcpyFps.value = settings.fps;
-      if (settings.alwaysOnTop !== undefined) optAlwaysOnTop.checked = settings.alwaysOnTop;
-      if (settings.stayAwake !== undefined) optStayAwake.checked = settings.stayAwake;
-      if (settings.audioForward !== undefined) optAudioForward.checked = settings.audioForward;
-      if (settings.showTouches !== undefined) optShowTouches.checked = settings.showTouches;
-      if (settings.record !== undefined) optRecord.checked = settings.record;
-      
-      const optTurnScreenOff = document.getElementById('opt-turn-screen-off');
-      if (optTurnScreenOff && settings.turnScreenOff !== undefined) {
-        optTurnScreenOff.checked = settings.turnScreenOff;
+    const id = Math.random().toString(36).substring(7);
+    let stdoutData = '';
+    
+    // Set up live listeners for output streaming
+    const removeListener = window.api.onTerminalOutput(id, (payload) => {
+      if (payload.type === 'stdout') {
+        appendTerminalLine(payload.data, 'output-line');
+        stdoutData += payload.data;
+      } else if (payload.type === 'stderr') {
+        appendTerminalLine(payload.data, 'error-line');
+      } else if (payload.type === 'exit') {
+        removeListener();
+        // Scroll to bottom
+        terminalScreen.scrollTop = terminalScreen.scrollHeight;
+        
+        // Save IP if adb connect succeeded
+        if (processedCmd.trim().startsWith('adb connect')) {
+          const match = processedCmd.match(/adb connect\s+([0-9.]+)/);
+          if (match && (stdoutData.includes('connected to') || stdoutData.includes('already connected'))) {
+            saveConnectedIp(match[1]);
+          }
+        }
+        refreshDevicesList();
       }
-    } catch (e) {
-      console.error('Error parsing device settings:', e);
+    });
+
+    const res = await window.api.runTerminalCommand(processedCmd, id);
+    if (!res.success) {
+      appendTerminalLine('Could not start subprocess!', 'error-line');
+      removeListener();
     }
-  } else {
-    // Reset to defaults if no saved profile exists
-    scrcpyResolution.value = "1080";
-    scrcpyBitrate.value = "8000000";
-    scrcpyFps.value = "60";
-    optAlwaysOnTop.checked = true;
-    optStayAwake.checked = true;
-    optAudioForward.checked = false; // default to disabled as requested
-    optShowTouches.checked = false;
-    optRecord.checked = false;
+  }
+
+  function appendTerminalLine(text, className) {
+    // Create clean formatted line
+    const line = document.createElement('div');
+    line.className = `term-line ${className}`;
+    line.innerText = text;
+    
+    terminalScreen.appendChild(line);
+    
+    // Scroll to bottom
+    terminalScreen.scrollTop = terminalScreen.scrollHeight;
+  }
+
+  // Helper to write lines to Terminal console from system components
+  function appendSystemLogToTerminal(text) {
+    appendTerminalLine(`[System] ${text}`, 'system-line');
+  }
+
+  // Device-specific settings persistence
+  function loadDeviceSettings(id) {
+    if (!id) return;
+    let saved = localStorage.getItem(`wpr_device_settings_${id}`);
+    if (!saved) saved = localStorage.getItem(`aero_device_settings_${id}`);
+    if (saved) {
+      try {
+        const settings = JSON.parse(saved);
+        if (settings.resolution !== undefined) scrcpyResolution.value = settings.resolution;
+        if (settings.bitrate !== undefined) scrcpyBitrate.value = settings.bitrate;
+        if (settings.fps !== undefined) scrcpyFps.value = settings.fps;
+        if (settings.alwaysOnTop !== undefined) optAlwaysOnTop.checked = settings.alwaysOnTop;
+        if (settings.stayAwake !== undefined) optStayAwake.checked = settings.stayAwake;
+        if (settings.audioForward !== undefined) optAudioForward.checked = settings.audioForward;
+        if (settings.showTouches !== undefined) optShowTouches.checked = settings.showTouches;
+        if (settings.record !== undefined) optRecord.checked = settings.record;
+        
+        const optTurnScreenOff = document.getElementById('opt-turn-screen-off');
+        if (optTurnScreenOff && settings.turnScreenOff !== undefined) {
+          optTurnScreenOff.checked = settings.turnScreenOff;
+        }
+      } catch (e) {
+        console.error('Error parsing device settings:', e);
+      }
+    } else {
+      // Reset to defaults if no saved profile exists
+      scrcpyResolution.value = "1080";
+      scrcpyBitrate.value = "8000000";
+      scrcpyFps.value = "60";
+      optAlwaysOnTop.checked = true;
+      optStayAwake.checked = true;
+      optAudioForward.checked = false; // default to disabled as requested
+      optShowTouches.checked = false;
+      optRecord.checked = false;
+      const optTurnScreenOff = document.getElementById('opt-turn-screen-off');
+      if (optTurnScreenOff) optTurnScreenOff.checked = false;
+    }
+
+    // Load saved password specifically
+    if (deviceSavedPassword) {
+      deviceSavedPassword.value = localStorage.getItem(`wpr_device_password_${id}`) || localStorage.getItem(`aero_device_password_${id}`) || '';
+    }
+
+    // Update audio connection state in main process to synchronize the floating controller
+    if (window.api && window.api.updateAudioState) {
+      window.api.updateAudioState(optAudioForward.checked);
+    }
+  }
+
+  function saveDeviceSettings(id) {
+    if (!id) return;
     const optTurnScreenOff = document.getElementById('opt-turn-screen-off');
-    if (optTurnScreenOff) optTurnScreenOff.checked = false;
+    const settings = {
+      resolution: scrcpyResolution.value,
+      bitrate: scrcpyBitrate.value,
+      fps: scrcpyFps.value,
+      alwaysOnTop: optAlwaysOnTop.checked,
+      stayAwake: optStayAwake.checked,
+      audioForward: optAudioForward.checked,
+      showTouches: optShowTouches.checked,
+      record: optRecord.checked,
+      turnScreenOff: optTurnScreenOff ? optTurnScreenOff.checked : false
+    };
+    localStorage.setItem(`wpr_device_settings_${id}`, JSON.stringify(settings));
   }
 
-  // Load saved password specifically
-  if (deviceSavedPassword) {
-    deviceSavedPassword.value = localStorage.getItem(`wpr_device_password_${id}`) || '';
+  // Automatically relaunch mirroring to apply audio/video settings dynamically
+  async function relaunchScrcpy() {
+    if (selectedDeviceId && isMirroringActive) {
+      appendTerminalLine(`[System] Restarting mirror to apply new settings...`, 'system-line');
+      // Terminate existing scrcpy instances
+      await window.api.executeCommand('taskkill /F /IM scrcpy.exe');
+      // Relaunch mirror after a brief delay
+      setTimeout(() => {
+        startScrcpyMirror(selectedDeviceId);
+      }, 600);
+    }
   }
 
-  // Update audio connection state in main process to synchronize the floating controller
-  if (window.api && window.api.updateAudioState) {
-    window.api.updateAudioState(optAudioForward.checked);
-  }
-}
+  // Bind change listeners to save settings automatically on user interaction
+  setTimeout(() => {
+    const optTurnScreenOff = document.getElementById('opt-turn-screen-off');
+    [scrcpyResolution, scrcpyBitrate, scrcpyFps, optAlwaysOnTop, optStayAwake, optAudioForward, optShowTouches, optRecord, optTurnScreenOff].forEach(input => {
+      if (input) {
+        input.addEventListener('change', () => {
+          if (selectedDeviceId) {
+            saveDeviceSettings(selectedDeviceId);
+          }
+          // If audioForward changes, synchronize it with the main process / floating controller bar
+          if (input === optAudioForward && window.api && window.api.updateAudioState) {
+            window.api.updateAudioState(optAudioForward.checked);
+            relaunchScrcpy(); // Hot-reload mirror on audio toggle
+          }
+        });
+      }
+    });
 
-function saveDeviceSettings(id) {
-  if (!id) return;
-  const optTurnScreenOff = document.getElementById('opt-turn-screen-off');
-  const settings = {
-    resolution: scrcpyResolution.value,
-    bitrate: scrcpyBitrate.value,
-    fps: scrcpyFps.value,
-    alwaysOnTop: optAlwaysOnTop.checked,
-    stayAwake: optStayAwake.checked,
-    audioForward: optAudioForward.checked,
-    showTouches: optShowTouches.checked,
-    record: optRecord.checked,
-    turnScreenOff: optTurnScreenOff ? optTurnScreenOff.checked : false
-  };
-  localStorage.setItem(`wpr_device_settings_${id}`, JSON.stringify(settings));
-}
-
-// Automatically relaunch mirroring to apply audio/video settings dynamically
-async function relaunchScrcpy() {
-  if (selectedDeviceId && isMirroringActive) {
-    appendTerminalLine(`[System] Restarting mirror to apply new settings...`, 'system-line');
-    // Terminate existing scrcpy instances
-    await window.api.executeCommand('taskkill /F /IM scrcpy.exe');
-    // Relaunch mirror after a brief delay
-    setTimeout(() => {
-      startScrcpyMirror(selectedDeviceId);
-    }, 600);
-  }
-}
-
-// Bind change listeners to save settings automatically on user interaction
-setTimeout(() => {
-  const optTurnScreenOff = document.getElementById('opt-turn-screen-off');
-  [scrcpyResolution, scrcpyBitrate, scrcpyFps, optAlwaysOnTop, optStayAwake, optAudioForward, optShowTouches, optRecord, optTurnScreenOff].forEach(input => {
-    if (input) {
-      input.addEventListener('change', () => {
+    // Listen to toggle events from the floating controller bar to update main checkbox and save settings
+    if (window.api && window.api.onToggleAudioCheckbox) {
+      window.api.onToggleAudioCheckbox((enabled) => {
+        optAudioForward.checked = enabled;
         if (selectedDeviceId) {
           saveDeviceSettings(selectedDeviceId);
+          relaunchScrcpy(); // Hot-reload mirror on audio toggle from floating bar!
         }
-        // If audioForward changes, synchronize it with the main process / floating controller bar
-        if (input === optAudioForward && window.api && window.api.updateAudioState) {
-          window.api.updateAudioState(optAudioForward.checked);
-          relaunchScrcpy(); // Hot-reload mirror on audio toggle
+      });
+    }
+
+    // Save password on input
+    if (deviceSavedPassword) {
+      deviceSavedPassword.addEventListener('input', () => {
+        if (selectedDeviceId) {
+          localStorage.setItem(`wpr_device_password_${selectedDeviceId}`, deviceSavedPassword.value);
         }
+      });
+    }
+  }, 1000);
+
+  // Function to select active device in UI for quick control actions
+  // Load settings specifically for this device
+  function selectDevice(id, name) {
+    selectedDeviceId = id;
+    selectedDeviceName = name;
+    
+    // Inform the Electron main process of device selection for the floating bar
+    if (window.api && window.api.setSelectedDevice) {
+      window.api.setSelectedDevice(id);
+    }
+    
+    // Load settings specifically for this device
+    loadDeviceSettings(id);
+    
+    // Sync the terminal select dropdown value
+    if (termSelectDevice) {
+      termSelectDevice.value = id || '';
+    }
+    
+    const label = document.getElementById('control-active-device-name');
+    if (label) {
+      label.innerText = name || id;
+      label.style.borderColor = 'var(--accent-color)';
+      label.style.color = 'var(--accent-color)';
+    }
+  }
+
+  // Bind change event to Terminal device selector
+  if (termSelectDevice) {
+    termSelectDevice.addEventListener('change', () => {
+      const val = termSelectDevice.value;
+      const opt = termSelectDevice.options[termSelectDevice.selectedIndex];
+      const text = opt ? opt.text : '';
+      const name = val ? text.split(' (')[0] : '';
+      selectDevice(val, name);
+    });
+  }
+
+  // Device Controller Buttons Event Listeners
+  const ctrlButtons = document.querySelectorAll('.ctrl-btn');
+  const btnUnlock = document.getElementById('ctrl-btn-unlock');
+  const btnScreenOff = document.getElementById('ctrl-btn-screen-off');
+  const btnScreenshot = document.getElementById('ctrl-btn-screenshot');
+
+  ctrlButtons.forEach(btn => {
+    const key = btn.getAttribute('data-key');
+    if (key) {
+      btn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        if (!selectedDeviceId) {
+          alert('Please click to select a connected phone from the list on the left first!');
+          return;
+        }
+        appendTerminalLine(`[Control] Sending key ${btn.innerText} (key: ${key}) to device ${selectedDeviceId}...`, 'info-line');
+        await window.api.executeCommand(`adb -s ${selectedDeviceId} shell input keyevent ${key}`);
       });
     }
   });
 
-  // Listen to toggle events from the floating controller bar to update main checkbox and save settings
-  if (window.api && window.api.onToggleAudioCheckbox) {
-    window.api.onToggleAudioCheckbox((enabled) => {
-      optAudioForward.checked = enabled;
-      if (selectedDeviceId) {
-        saveDeviceSettings(selectedDeviceId);
-        relaunchScrcpy(); // Hot-reload mirror on audio toggle from floating bar!
-      }
-    });
-  }
-
-  // Save password on input
-  if (deviceSavedPassword) {
-    deviceSavedPassword.addEventListener('input', () => {
-      if (selectedDeviceId) {
-        localStorage.setItem(`wpr_device_password_${selectedDeviceId}`, deviceSavedPassword.value);
-      }
-    });
-  }
-}, 1000);
-
-// Function to select active device in UI for quick control actions
-// Load settings specifically for this device
-function selectDevice(id, name) {
-  selectedDeviceId = id;
-  selectedDeviceName = name;
-  
-  // Inform the Electron main process of device selection for the floating bar
-  if (window.api && window.api.setSelectedDevice) {
-    window.api.setSelectedDevice(id);
-  }
-  
-  // Load settings specifically for this device
-  loadDeviceSettings(id);
-  
-  const label = document.getElementById('control-active-device-name');
-  if (label) {
-    label.innerText = name || id;
-    label.style.borderColor = 'var(--accent-color)';
-    label.style.color = 'var(--accent-color)';
-  }
-}
-
-// Device Controller Buttons Event Listeners
-const ctrlButtons = document.querySelectorAll('.ctrl-btn');
-const btnUnlock = document.getElementById('ctrl-btn-unlock');
-const btnScreenOff = document.getElementById('ctrl-btn-screen-off');
-const btnScreenshot = document.getElementById('ctrl-btn-screenshot');
-
-ctrlButtons.forEach(btn => {
-  const key = btn.getAttribute('data-key');
-  if (key) {
-    btn.addEventListener('click', async (e) => {
+  if (btnUnlock) {
+    btnUnlock.addEventListener('click', async (e) => {
       e.preventDefault();
       if (!selectedDeviceId) {
-        alert('Please click to select a connected phone from the list on the left first!');
+        alert('Please select a device!');
         return;
       }
-      appendTerminalLine(`[Control] Sending key ${btn.innerText} (key: ${key}) to device ${selectedDeviceId}...`, 'info-line');
-      await window.api.executeCommand(`adb -s ${selectedDeviceId} shell input keyevent ${key}`);
+      appendTerminalLine(`[Control] Sending swipe up to unlock phone ${selectedDeviceId}...`, 'info-line');
+      // Simulate a swipe gesture from bottom to middle of screen
+      await window.api.executeCommand(`adb -s ${selectedDeviceId} shell input swipe 500 1500 500 500 350`);
     });
   }
-});
 
-if (btnUnlock) {
-  btnUnlock.addEventListener('click', async (e) => {
-    e.preventDefault();
-    if (!selectedDeviceId) {
-      alert('Please select a device!');
-      return;
-    }
-    appendTerminalLine(`[Control] Sending swipe up to unlock phone ${selectedDeviceId}...`, 'info-line');
-    // Simulate a swipe gesture from bottom to middle of screen
-    await window.api.executeCommand(`adb -s ${selectedDeviceId} shell input swipe 500 1500 500 500 350`);
-  });
-}
-
-if (btnScreenOff) {
-  btnScreenOff.addEventListener('click', async (e) => {
-    e.preventDefault();
-    if (!selectedDeviceId) {
-      alert('Please select a device!');
-      return;
-    }
-    appendTerminalLine(`[Control] Turning off physical screen of device ${selectedDeviceId} (mirror remains active)...`, 'info-line');
-    // Keyevent 223 turns screen off (SLEEP)
-    await window.api.executeCommand(`adb -s ${selectedDeviceId} shell input keyevent 223`);
-  });
-}
-
-if (btnScreenshot) {
-  btnScreenshot.addEventListener('click', async (e) => {
-    e.preventDefault();
-    if (!selectedDeviceId) {
-      alert('Please select a device!');
-      return;
-    }
-    appendTerminalLine(`[Control] Taking screenshot on phone ${selectedDeviceId}...`, 'info-line');
-    // Keyevent 120 snaps screenshot
-    await window.api.executeCommand(`adb -s ${selectedDeviceId} shell input keyevent 120`);
-  });
-}
-
-// Auto-connect previously saved devices on startup
-async function autoConnectSavedDevices() {
-  const saved = localStorage.getItem('wpr_saved_ips');
-  if (!saved) return;
-  
-  try {
-    const ipList = JSON.parse(saved);
-    if (!Array.isArray(ipList) || ipList.length === 0) return;
-    
-    appendTerminalLine(`[Auto] Detected ${ipList.length} previously connected device(s). Reconnecting...`, 'info-line');
-    
-    for (const ip of ipList) {
-      appendTerminalLine(`[Auto] Reconnecting: adb connect ${ip}:5555`, 'system-line');
-      const res = await window.api.executeCommand(`adb connect ${ip}:5555`);
-      if (res.success && res.stdout.includes('connected to')) {
-        appendTerminalLine(`[Auto] Successfully reconnected to ${ip}:5555!`, 'success-line');
-      } else {
-        appendTerminalLine(`[Auto] Failed to reconnect to ${ip}:5555 (device may be offline).`, 'error-line');
+  if (btnScreenOff) {
+    btnScreenOff.addEventListener('click', async (e) => {
+      e.preventDefault();
+      if (!selectedDeviceId) {
+        alert('Please select a device!');
+        return;
       }
-    }
-    // Refresh devices list after trying all reconnections
-    refreshDevicesList();
-  } catch (err) {
-    console.error('Error auto-connecting:', err);
+      appendTerminalLine(`[Control] Turning off physical screen of device ${selectedDeviceId} (mirror remains active)...`, 'info-line');
+      // Keyevent 223 turns screen off (SLEEP)
+      await window.api.executeCommand(`adb -s ${selectedDeviceId} shell input keyevent 223`);
+    });
   }
-}
 
-// Function to save IP address
-function saveConnectedIp(ip) {
-  if (!ip) return;
-  try {
-    const saved = localStorage.getItem('wpr_saved_ips');
-    let ipList = saved ? JSON.parse(saved) : [];
-    if (!Array.isArray(ipList)) ipList = [];
-    
-    if (!ipList.includes(ip)) {
-      ipList.push(ip);
-      localStorage.setItem('wpr_saved_ips', JSON.stringify(ipList));
-      appendTerminalLine(`[System] Saved IP ${ip} for auto-connection on next launch.`, 'success-line');
-    }
-  } catch (err) {
-    console.error('Error saving IP:', err);
+  if (btnScreenshot) {
+    btnScreenshot.addEventListener('click', async (e) => {
+      e.preventDefault();
+      if (!selectedDeviceId) {
+        alert('Please select a device!');
+        return;
+      }
+      appendTerminalLine(`[Control] Taking screenshot on phone ${selectedDeviceId}...`, 'info-line');
+      // Keyevent 120 snaps screenshot
+      await window.api.executeCommand(`adb -s ${selectedDeviceId} shell input keyevent 120`);
+    });
   }
-}
 
-// Setup Quick IP Commands Button Listeners
-const quickIpButtons = document.querySelectorAll('.quick-ip-btn');
-quickIpButtons.forEach(btn => {
-  btn.addEventListener('click', async (e) => {
-    e.preventDefault();
-    const ip = wizIp.value.trim();
-    if (!ip || ip === '192.168.1.' || ip.endsWith('.')) {
-      alert('Please enter a valid phone IP address in the field above first!');
-      wizIp.focus();
+  // Auto-connect previously saved devices on startup
+  async function autoConnectSavedDevices() {
+    let saved = localStorage.getItem('wpr_saved_ips');
+    if (!saved) saved = localStorage.getItem('aero_saved_ips');
+    if (!saved || saved === '[]') {
+      appendTerminalLine('[Auto] No previously connected devices found in history.', 'info-line');
       return;
     }
-    
-    const connectPort = wizConnectPort.value.trim();
-    const pairPort = wizPairPort.value.trim();
-    const pairCode = wizPairCode.value.trim();
-    
-    const template = btn.getAttribute('data-template');
-    
-    if (template.includes('{connect_port}') && !connectPort) {
-      alert('Please enter the Connection Port first!\n\nTip: You can use "mDNS Scan" to automatically discover and auto-fill the port.');
-      wizConnectPort.focus();
-      return;
-    }
-    
-    if (template.includes('{pair_port}') && !pairPort) {
-      alert('Please enter the Pair Port first!');
-      wizPairPort.focus();
-      return;
-    }
-    
-    if (template.includes('{pair_code}') && !pairCode) {
-      alert('Please enter the Pairing PIN first!');
-      wizPairCode.focus();
-      return;
-    }
-    
-    const command = template.replace(/{ip}/g, ip)
-                            .replace(/{connect_port}/g, connectPort)
-                            .replace(/{pair_port}/g, pairPort)
-                            .replace(/{pair_code}/g, pairCode);
-    
-    // Clear previous logs
-    wizardLog.innerHTML = `[Start] Running quick command by IP...\n`;
-    
-    btn.disabled = true;
-    const originalText = btn.innerText;
-    btn.innerText = '⚙️ Running...';
     
     try {
-      await executeStreamingCommand(command, wizardLog);
-    } catch (err) {
-      wizardLog.innerHTML += `\n❌ Error: ${err.message}\n`;
-    } finally {
-      btn.disabled = false;
-      btn.innerText = originalText;
+      const ipList = JSON.parse(saved);
+      if (!Array.isArray(ipList) || ipList.length === 0) {
+        appendTerminalLine('[Auto] No previously connected devices found in history.', 'info-line');
+        return;
+      }
+      
+      appendTerminalLine(`[Auto] Detected ${ipList.length} previously connected device(s) in history: ${ipList.join(', ')}. Reconnecting...`, 'info-line');
+      
+      for (const ip of ipList) {
+        appendTerminalLine(`[Auto] Running: adb connect ${ip}:5555`, 'system-line');
+        const res = await window.api.executeCommand(`adb connect ${ip}:5555`);
+        if (res.success && (res.stdout.includes('connected to') || res.stdout.includes('already connected'))) {
+          appendTerminalLine(`[Auto] Successfully reconnected to ${ip}:5555!`, 'success-line');
+        } else {
+          appendTerminalLine(`[Auto] Failed to reconnect to ${ip}:5555 (device may be offline or IP changed).`, 'error-line');
+        }
+      }
+      // Refresh devices list after trying all reconnections
       refreshDevicesList();
-      checkAdbStatus();
+    } catch (err) {
+      console.error('Error auto-connecting:', err);
+      appendTerminalLine(`[Auto] Error parsing saved devices history: ${err.message}`, 'error-line');
     }
+  }
+
+  // Function to save IP address
+  function saveConnectedIp(ip) {
+    if (!ip) return;
+    try {
+      let saved = localStorage.getItem('wpr_saved_ips');
+      if (!saved) saved = localStorage.getItem('aero_saved_ips');
+      let ipList = saved ? JSON.parse(saved) : [];
+      if (!Array.isArray(ipList)) ipList = [];
+      
+      if (!ipList.includes(ip)) {
+        ipList.push(ip);
+        localStorage.setItem('wpr_saved_ips', JSON.stringify(ipList));
+        appendTerminalLine(`[System] Saved IP ${ip} for auto-connection on next launch.`, 'success-line');
+      }
+    } catch (err) {
+      console.error('Error saving IP:', err);
+    }
+  }
+
+  // Setup Quick IP Commands Button Listeners
+  const quickIpButtons = document.querySelectorAll('.quick-ip-btn');
+  quickIpButtons.forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      const ip = wizIp.value.trim();
+      if (!ip || ip === '192.168.1.' || ip.endsWith('.')) {
+        alert('Please enter a valid phone IP address in the field above first!');
+        wizIp.focus();
+        return;
+      }
+      
+      const connectPort = wizConnectPort.value.trim();
+      const pairPort = wizPairPort.value.trim();
+      const pairCode = wizPairCode.value.trim();
+      
+      const template = btn.getAttribute('data-template');
+      
+      if (template.includes('{connect_port}') && !connectPort) {
+        alert('Please enter the Connection Port first!\n\nTip: You can use "mDNS Scan" to automatically discover and auto-fill the port.');
+        wizConnectPort.focus();
+        return;
+      }
+      
+      if (template.includes('{pair_port}') && !pairPort) {
+        alert('Please enter the Pair Port first!');
+        wizPairPort.focus();
+        return;
+      }
+      
+      if (template.includes('{pair_code}') && !pairCode) {
+        alert('Please enter the Pairing PIN first!');
+        wizPairCode.focus();
+        return;
+      }
+      
+      const command = template.replace(/{ip}/g, ip)
+                              .replace(/{connect_port}/g, connectPort)
+                              .replace(/{pair_port}/g, pairPort)
+                              .replace(/{pair_code}/g, pairCode);
+      
+      // Clear previous logs
+      wizardLog.innerHTML = `[Start] Running quick command by IP...\n`;
+      
+      btn.disabled = true;
+      const originalText = btn.innerText;
+      btn.innerText = '⚙️ Running...';
+      
+      try {
+        const res = await executeStreamingCommand(command, wizardLog);
+        if (template.includes('connect') && (res.success || res.stdout.includes('connected to') || res.stdout.includes('already connected'))) {
+          saveConnectedIp(ip);
+        }
+      } catch (err) {
+        wizardLog.innerHTML += `\n❌ Error: ${err.message}\n`;
+      } finally {
+        btn.disabled = false;
+        btn.innerText = originalText;
+        refreshDevicesList();
+        checkAdbStatus();
+      }
+    });
   });
-});
 
 // Bind click to toggle float controller panel
 if (btnToggleFloatBar) {
@@ -1404,7 +1527,7 @@ if (btnToggleFloatBar) {
 if (window.api && window.api.onShowPasswordPrompt) {
   window.api.onShowPasswordPrompt(() => {
     if (selectedDeviceId) {
-      const savedPass = localStorage.getItem(`wpr_device_password_${selectedDeviceId}`) || '';
+      const savedPass = localStorage.getItem(`wpr_device_password_${selectedDeviceId}`) || localStorage.getItem(`aero_device_password_${selectedDeviceId}`) || '';
       if (savedPass) {
         appendTerminalLine(`[Control] Auto-entering password to unlock...`, 'info-line');
         window.api.executeControllerKey('input-password:' + savedPass);
@@ -1431,7 +1554,21 @@ if (window.api && window.api.onMirrorStatusChanged) {
   });
 }
 
-// Initial Devices Refresh
-refreshDevicesList();
-updateWizardPlaceholders();
-autoConnectSavedDevices();
+// Initial App Setup in sequential async order
+async function initializeApp() {
+  updateWizardPlaceholders();
+  appendTerminalLine('[Auto] Initializing ADB server...', 'system-line');
+  const serverRes = await window.api.executeCommand('adb start-server');
+  if (serverRes.success) {
+    appendTerminalLine('[Auto] ADB server initialized successfully.', 'success-line');
+  } else {
+    appendTerminalLine('[Auto] ADB server failed to initialize: ' + serverRes.stderr, 'error-line');
+  }
+  await checkAdbStatus();
+  appendTerminalLine('[Auto] Checking previously connected devices...', 'system-line');
+  await autoConnectSavedDevices();
+  appendTerminalLine('[Auto] Scanning for currently active devices...', 'system-line');
+  await refreshDevicesList();
+  appendTerminalLine('[Auto] App initialization finished.', 'success-line');
+}
+initializeApp();
