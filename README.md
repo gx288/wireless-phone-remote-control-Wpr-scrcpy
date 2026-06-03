@@ -1,6 +1,29 @@
 # WprScrcpy v2 — Wireless Phone Remote Control (ADB & Scrcpy GUI)
 
-[**Tiếng Việt**](#tiếng-việt) | [**English**](#english-documentation)
+[**English**](#english) | [**Tiếng Việt**](#tiếng-việt)
+
+---
+
+## English
+
+WprScrcpy v2 is a Windows GUI for managing, mirroring, and controlling Android devices wirelessly using ADB and scrcpy. It features quick QR code pairing, a smart transparent overlay HUD, and automatic global F-key shortcut handling.
+
+### Key Features
+1. **Wireless Connection**:
+   * **QR Code Pairing**: Scan a dynamically generated QR code to automatically parse IP, port, and PIN from Android's *Wireless Debugging* screen.
+   * **Manual Connect**: Step-by-step inputs optimized for Android's connection flow (Connect Port, Pair Port, and PIN code).
+   * **Connection History**: Remembers recently connected devices for instant reconnection.
+2. **Transparent HUD Overlay**:
+   * **Dynamic Alignment**: Vertically aligned sidebar overlay that automatically snaps and resizes to the scrcpy mirror window.
+   * **Smart Collapse**: Collapse the control panel into a compact 60px vertical tab that hugs the window border to prevent screen obstruction.
+   * **Auto Show/Hide (Z-Order Sync)**: Automatically hides the control panel when the scrcpy mirror window loses focus and shows it when active.
+   * **Pin Mirror 📌**: Keeps both the mirror window and the control panel pinned always-on-top.
+3. **F-Keys Shortcut Management**:
+   * Map standard `F1` to `F12` keys for quick operations (Home, Back, Recents, Rotate, Screen Off, Volume Controls, Screen Record, etc.).
+   * Automatically registers shortcuts when the mirror window is active and releases them globally when switching to other apps.
+4. **Extra Utilities**:
+   * **Audio Forwarding**: Streams Android audio to PC in real-time.
+   * **Screen Recording & Physical Screen Off**: Records mirroring sessions and turns off the physical phone screen to save battery.
 
 ---
 
@@ -24,29 +47,6 @@ WprScrcpy v2 là giao diện đồ họa (GUI) quản lý kết nối và điề
 4. **Tiện ích bổ sung**:
    * **Audio Forwarding**: Truyền phát âm thanh trực tiếp từ thiết bị Android lên máy tính thời gian thực.
    * **Ghi màn hình & Tắt màn hình vật lý**: Ghi lại phiên làm việc thành định dạng video lưu trên máy tính, hỗ trợ tắt màn hình thiết bị Android trong lúc mirror để tiết kiệm pin.
-
----
-
-## English Documentation
-
-WprScrcpy v2 is a Windows GUI for managing, mirroring, and controlling Android devices wirelessly using ADB and scrcpy. It features quick QR code pairing, a smart transparent overlay HUD, and automatic global F-key shortcut handling.
-
-### Key Features
-1. **Wireless Connection**:
-   * **QR Code Pairing**: Scan a dynamically generated QR code to automatically parse IP, port, and PIN from Android's *Wireless Debugging* screen.
-   * **Manual Connect**: Step-by-step inputs optimized for Android's connection flow (Connect Port, Pair Port, and PIN code).
-   * **Connection History**: Remembers recently connected devices for instant reconnection.
-2. **Transparent HUD Overlay**:
-   * **Dynamic Alignment**: Vertically aligned sidebar overlay that automatically snaps and resizes to the scrcpy mirror window.
-   * **Smart Collapse**: Collapse the control panel into a compact 60px vertical tab that hugs the window border to prevent screen obstruction.
-   * **Auto Show/Hide (Z-Order Sync)**: Automatically hides the control panel when the scrcpy mirror window loses focus and shows it when active.
-   * **Pin Mirror 📌**: Keeps both the mirror window and the control panel pinned always-on-top.
-3. **F-Keys Shortcut Management**:
-   * Map standard `F1` to `F12` keys for quick operations (Home, Back, Recents, Rotate, Screen Off, Volume Controls, Screen Record, etc.).
-   * Automatically registers shortcuts when the mirror window is active and releases them globally when switching to other apps.
-4. **Extra Utilities**:
-   * **Audio Forwarding**: Streams Android audio to PC in real-time.
-   * **Screen Recording & Physical Screen Off**: Records mirroring sessions and turns off the physical phone screen to save battery.
 
 ---
 
@@ -77,5 +77,6 @@ npm start
 npx electron-packager . WprScrcpy --platform=win32 --arch=x64 --icon=smartphone.ico --overwrite --out=dist
 ```
 Bản build di động hoàn chỉnh sẽ được lưu trong thư mục `dist/WprScrcpy-win32-x64/`.
+
 
 
