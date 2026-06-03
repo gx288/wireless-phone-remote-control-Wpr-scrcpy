@@ -1,0 +1,7 @@
+node_modules/
+dist/
+scrcpy-bin/
+.DS_Store
+*.log
+*.exe
+!get_scrcpy_bounds.exe

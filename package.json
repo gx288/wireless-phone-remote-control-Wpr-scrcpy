@@ -1,0 +1,30 @@
+{
+  "name": "wpr-scrcpy",
+  "version": "1.0.0",
+  "description": "WprScrcpy GUI and ADB Controller with Wi-Fi Debugging QR Code and Terminal",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win portable"
+  },
+  "build": {
+    "appId": "com.antigravity.wprscrcpy",
+    "productName": "WprScrcpy",
+    "win": {
+      "target": "portable",
+      "icon": "smartphone.ico"
+    }
+  },
+  "keywords": [],
+  "author": "Antigravity",
+  "license": "ISC",
+  "dependencies": {
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3",
+    "electron-packager": "^17.1.2",
+    "png-to-ico": "^3.0.1"
+  }
+}

@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>AeroController</title>
+  <style>
+    :root {
+      --bg-dark: #121218;                   /* Solid premium dark background */
+      --bg-hover: #272730;                  /* Solid hover state */
+      --accent-color: #38bdf8;              /* Sleek sky blue */
+      --border-color: #2e2e38;              /* Solid border */
+      --text-muted: #94a3b8;                /* Slate */
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background: transparent;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    /* Ultra-compact solid dark controller bar */
+    .controller-bar {
+      width: 56px;
+      height: 665px;
+      background: var(--bg-dark);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      display: flex;
+      flex-direction: column;
+      padding: 4px;
+      position: relative;
+    }
+
+    /* Drag handle */
+    .drag-handle {
+      height: 18px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: move;
+      -webkit-app-region: drag;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 4px;
+      padding-bottom: 4px;
+    }
+
+    .drag-line {
+      width: 30px;
+      height: 3px;
+      background: var(--border-color);
+      border-radius: 1.5px;
+    }
+
+    /* Button list */
+    .btn-list {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      flex-grow: 1;
+      align-items: center;
+    }
+
+    /* Minimalist Flat Icon Buttons */
+    .ctrl-btn {
+      width: 44px;
+      height: 44px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-muted);
+      border-radius: 5px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      font-size: 20px;
+      cursor: pointer;
+      transition: all 0.1s ease-in-out;
+      -webkit-app-region: no-drag;
+      position: relative;
+      padding-bottom: 6px;
+      
+      /* Force perfect monochrome gray look using CSS filter so standard emojis look extremely clean & identical */
+      filter: grayscale(100%) brightness(0.9);
+    }
+
+    /* Subtle F-key overlay text */
+    .f-key {
+      position: absolute;
+      bottom: 2px;
+      font-size: 9px;
+      font-weight: 700;
+      color: #64748b;
+      letter-spacing: -0.2px;
+    }
+
+    .ctrl-btn:hover {
+      background: var(--bg-hover);
+      border-color: var(--border-color);
+      color: var(--accent-color);
+      filter: none; /* Show full sky-blue / active color on hover */
+    }
+
+    .ctrl-btn:hover .f-key {
+      color: var(--accent-color);
+    }
+
+    .ctrl-btn:active {
+      background: var(--bg-dark);
+      transform: scale(0.95);
+    }
+
+    /* Pulse animation for recording state */
+    .ctrl-btn.recording {
+      border-color: #ef4444;
+      background: rgba(239, 68, 68, 0.15);
+      filter: none;
+      animation: pulse 1.5s infinite;
+    }
+
+    /* Active styling for audio connection state */
+    .ctrl-btn.audio-active {
+      border-color: var(--accent-color);
+      background: rgba(190, 18, 60, 0.15);
+      filter: none;
+    }
+
+    /* Active stay on top button indicator */
+    .ctrl-btn.stay-top-active {
+      border-color: var(--accent-color);
+      color: var(--accent-color);
+      filter: none;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.6; }
+      100% { opacity: 1; }
+    }
+
+    /* Minimalist Tooltip */
+    .ctrl-btn::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      left: 56px;
+      background: var(--bg-dark);
+      border: 1px solid var(--border-color);
+      color: #fff;
+      padding: 4px 8px;
+      font-size: 11px;
+      border-radius: 4px;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.1s ease;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+      z-index: 9999;
+    }
+
+    .ctrl-btn:hover::after {
+      opacity: 1;
+    }
+
+    .divider {
+      width: 36px;
+      height: 1px;
+      background: var(--border-color);
+      margin: 2px 0;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- EXPANDED COMPACT BAR -->
+  <div id="full-panel" class="controller-bar">
+    <div class="drag-handle" id="full-drag-handle">
+      <div class="drag-line"></div>
+    </div>
+
+    <div class="btn-list">
+      <!-- Group 1: Navigation -->
+      <button class="ctrl-btn" data-key="3" data-tooltip="Trang chủ (F1)">🏠<span class="f-key">F1</span></button>
+      <button class="ctrl-btn" data-key="4" data-tooltip="Quay lại (F2)">⬅️<span class="f-key">F2</span></button>
+      <button class="ctrl-btn" data-key="187" data-tooltip="Gần đây (F3)">▢<span class="f-key">F3</span></button>
+      
+      <div class="divider"></div>
+
+      <!-- Group 2: Screen & Input -->
+      <button class="ctrl-btn" data-key="rotate" data-tooltip="Xoay màn hình (F4)">🔄<span class="f-key">F4</span></button>
+      <button class="ctrl-btn" data-key="password" data-tooltip="Nhập mật khẩu/PIN ĐT (F5)">🔑<span class="f-key">F5</span></button>
+      <button class="ctrl-btn" data-key="screen-off" id="btn-screen-off" data-tooltip="Tắt/Mở màn hình vật lý (F6)">🌙<span class="f-key">F6</span></button>
+
+      <div class="divider"></div>
+
+      <!-- Group 3: Volume & Power -->
+      <button class="ctrl-btn" data-key="26" data-tooltip="Phím nguồn (F7)">🔌<span class="f-key">F7</span></button>
+      <button class="ctrl-btn" data-key="25" data-tooltip="Giảm âm lượng ĐT (F8)">🔉<span class="f-key">F8</span></button>
+      <button class="ctrl-btn" data-key="24" data-tooltip="Tăng âm lượng ĐT (F9)">🔊<span class="f-key">F9</span></button>
+
+      <div class="divider"></div>
+
+      <!-- Group 4: Media & Capture -->
+      <button class="ctrl-btn" id="btn-toggle-audio" data-tooltip="Ngắt/Bật âm thanh PC (F10)">🎧<span class="f-key">F10</span></button>
+      <button class="ctrl-btn" id="btn-record" data-key="record" data-tooltip="Ghi màn hình (F11)">⏺️<span class="f-key">F11</span></button>
+      <button class="ctrl-btn" data-key="screenshot" data-tooltip="Chụp ảnh màn hình">📸</button>
+
+      <div class="divider"></div>
+
+      <!-- Group 5: Panel & Mirror Window Controls -->
+      <button class="ctrl-btn" id="btn-mirror-pin" data-tooltip="Ghim cửa sổ Mirror lên trên (Alt+T)">📌</button>
+      <button class="ctrl-btn" id="btn-collapse" data-tooltip="Thu nhỏ panel (kéo rê)">🗕</button>
+      <button class="ctrl-btn" id="btn-hide-panel" data-tooltip="Ẩn panel (F12 để mở lại)" style="color: #ef4444; filter: none;">✕</button>
+    </div>
+  </div>
+
+  <!-- COLLAPSED MINI BUBBLE -->
+  <div id="collapsed-panel" style="display: none; flex-direction: column; align-items: center; justify-content: center; height: 72px; width: 46px; background: var(--bg-dark); border: 1px solid var(--border-color); border-radius: 8px; padding: 4px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); -webkit-app-region: drag; cursor: move;">
+    <div style="font-size: 8px; color: var(--text-muted); margin-bottom: 2px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Aero</div>
+    <button id="btn-expand" class="ctrl-btn" style="-webkit-app-region: no-drag; width: 36px; height: 36px; font-size: 16px; filter: none; color: var(--accent-color); border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-hover); padding-bottom: 0;" data-tooltip="Kích đúp hoặc Click để mở rộng">📱</button>
+  </div>
+
+  <script>
+    let isRecording = false;
+    let isAudioForward = false;
+    let screenOffState = false;
+    let isMirrorPinned = false;
+
+    const fullPanel = document.getElementById('full-panel');
+    const collapsedPanel = document.getElementById('collapsed-panel');
+
+    // Initialize audio forwarding state on load
+    if (window.api && window.api.getAudioState) {
+      window.api.getAudioState().then(enabled => {
+        updateAudioButtonUI(enabled);
+      });
+    }
+
+    // Listen for live updates from main process / main window
+    if (window.api && window.api.onUpdateAudioState) {
+      window.api.onUpdateAudioState(enabled => {
+        updateAudioButtonUI(enabled);
+      });
+    }
+
+    // Listen for global F-key triggers broadcast from Main Process
+    if (window.api && window.api.onTriggerFKeyAction) {
+      window.api.onTriggerFKeyAction(action => {
+        triggerAction(action);
+      });
+    }
+
+    function updateAudioButtonUI(enabled) {
+      isAudioForward = enabled;
+      const btnAudio = document.getElementById('btn-toggle-audio');
+      if (btnAudio) {
+        if (enabled) {
+          btnAudio.classList.add('audio-active');
+          btnAudio.setAttribute('data-tooltip', 'Âm thanh PC: Đang BẬT (Khởi động lại phản chiếu để áp dụng)');
+        } else {
+          btnAudio.classList.remove('audio-active');
+          btnAudio.setAttribute('data-tooltip', 'Âm thanh PC: Đang TẮT (Khởi động lại phản chiếu để áp dụng)');
+        }
+      }
+    }
+
+    // Modular action execution
+    function triggerAction(action) {
+      if (action === 'password') {
+        window.api.executeControllerKey('password');
+      } else if (action === 'audio-toggle') {
+        window.api.toggleAudioForwardState();
+      } else if (action === 'screen-off') {
+        screenOffState = !screenOffState;
+        const btn = document.getElementById('btn-screen-off');
+        if (btn) btn.setAttribute('data-tooltip', screenOffState ? 'Mở lại màn hình (F6)' : 'Tắt/Mở màn hình vật lý (F6)');
+        window.api.executeControllerKey(screenOffState ? 'screen-off' : 'screen-on');
+      } else if (action === 'record-toggle') {
+        const btnRec = document.getElementById('btn-record');
+        if (!isRecording) {
+          isRecording = true;
+          btnRec.classList.add('recording');
+          btnRec.setAttribute('data-tooltip', 'Dừng ghi hình (F11)');
+          window.api.executeControllerKey('record-start');
+        } else {
+          isRecording = false;
+          btnRec.classList.remove('recording');
+          btnRec.setAttribute('data-tooltip', 'Ghi màn hình (F11)');
+          window.api.executeControllerKey('record-stop');
+        }
+      } else {
+        window.api.executeControllerKey(action);
+      }
+    }
+
+    // Collapse and Expand mechanics
+    function collapseToolbar() {
+      fullPanel.style.display = 'none';
+      collapsedPanel.style.display = 'flex';
+      if (window.api && window.api.resizeControllerWindow) {
+        window.api.resizeControllerWindow(56, 72);
+      }
+    }
+
+    function expandToolbar() {
+      collapsedPanel.style.display = 'none';
+      fullPanel.style.display = 'flex';
+      if (window.api && window.api.resizeControllerWindow) {
+        window.api.resizeControllerWindow(56, 675);
+      }
+    }
+
+    // Double click events for collapse/expand
+    document.getElementById('full-drag-handle').addEventListener('dblclick', collapseToolbar);
+    fullPanel.addEventListener('dblclick', (e) => {
+      if (e.target.closest('.ctrl-btn')) return;
+      collapseToolbar();
+    });
+
+    document.getElementById('btn-collapse').addEventListener('click', collapseToolbar);
+    
+    document.getElementById('btn-expand').addEventListener('click', expandToolbar);
+    collapsedPanel.addEventListener('dblclick', expandToolbar);
+
+    // 📌 Mirror window pin toggle: sends Alt+T to scrcpy window
+    const btnMirrorPin = document.getElementById('btn-mirror-pin');
+    btnMirrorPin.addEventListener('click', () => {
+      isMirrorPinned = !isMirrorPinned;
+      if (isMirrorPinned) {
+        btnMirrorPin.classList.add('stay-top-active');
+        btnMirrorPin.style.filter = 'none';
+        btnMirrorPin.setAttribute('data-tooltip', 'Cửa sổ Mirror: Đang Ghim Trên Cùng (click để tắt)');
+      } else {
+        btnMirrorPin.classList.remove('stay-top-active');
+        btnMirrorPin.style.filter = '';
+        btnMirrorPin.setAttribute('data-tooltip', 'Ghim cửa sổ Mirror lên trên (Alt+T)');
+      }
+      if (window.api && window.api.toggleMirrorPin) {
+        window.api.toggleMirrorPin();
+      }
+    });
+
+    // ✕ Hide panel button: completely hides the panel, F12 to restore
+    document.getElementById('btn-hide-panel').addEventListener('click', () => {
+      if (window.api && window.api.hideControllerWindow) {
+        window.api.hideControllerWindow();
+      }
+    });
+
+    // Local F1-F12 keydown events when controller window is focused
+    document.addEventListener('keydown', (e) => {
+      const fKeys = {
+        'F1': '3',         // F1 = Home
+        'F2': '4',         // F2 = Back
+        'F3': '187',
+        'F4': 'rotate',
+        'F5': 'password',
+        'F6': 'screen-off',
+        'F7': '26',
+        'F8': '25',
+        'F9': '24',
+        'F10': 'audio-toggle',
+        'F11': 'record-toggle'
+      };
+      
+      const action = fKeys[e.key];
+      if (action) {
+        e.preventDefault();
+        triggerAction(action);
+      }
+    });
+
+    // Click events
+    document.querySelectorAll('.ctrl-btn[data-key]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const key = btn.getAttribute('data-key');
+        if (key === 'record') {
+          triggerAction('record-toggle');
+        } else if (key === 'screen-off') {
+          triggerAction('screen-off');
+        } else {
+          triggerAction(key);
+        }
+      });
+    });
+
+    // Toggle audio forwarding state
+    document.getElementById('btn-toggle-audio').addEventListener('click', async () => {
+      triggerAction('audio-toggle');
+    });
+  </script>
+</body>
+</html>

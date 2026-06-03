@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>WprScrcpy Overlay</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: transparent;
+      overflow: hidden;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      user-select: none;
+    }
+
+    body {
+      display: flex;
+      flex-direction: row;
+    }
+
+    /* ── Mirror zone: transparent, click-through ── */
+    #mirror-zone {
+      flex: 1;
+      background: transparent;
+      pointer-events: none;
+    }
+
+    /* ── Sidebar wrapper (always 48px in DOM) ── */
+    #sidebar-wrap {
+      width: 48px;
+      height: 100%;
+      position: relative;
+      flex-shrink: 0;
+      pointer-events: all;
+    }
+
+    /* Collapsed mini-tab */
+    #mini-tab {
+      position: absolute;
+      top: 50%; left: 0;
+      transform: translateY(-50%);
+      width: 16px;
+      height: 60px;
+      background: rgba(9, 9, 16, 0.91);
+      border: 1px solid rgba(99, 102, 241, 0.45);
+      border-left: none;
+      border-radius: 0 8px 8px 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.18s ease, background 0.1s ease;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      z-index: 10;
+      box-shadow: 2px 0 10px rgba(0, 0, 0, 0.5);
+    }
+    #mini-tab:hover {
+      background: rgba(99, 102, 241, 0.25);
+    }
+    #mini-tab.visible {
+      opacity: 1;
+      pointer-events: all;
+    }
+    #mini-tab-arrow {
+      font-size: 8px;
+      color: rgba(165, 180, 252, 0.9);
+      writing-mode: vertical-rl;
+      letter-spacing: 1px;
+    }
+
+    /* Expanded sidebar */
+    #sidebar {
+      position: absolute;
+      top: 0; left: 0;
+      width: 48px; height: 100%;
+      background: rgba(9, 9, 16, 0.91);
+      border-left: 1px solid rgba(99, 102, 241, 0.22);
+      border-radius: 0 10px 10px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 8px 0 6px;
+      gap: 2px;
+      overflow: hidden;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      box-shadow: -2px 0 20px rgba(0,0,0,0.5);
+      transition: opacity 0.18s ease, transform 0.18s ease;
+      z-index: 5;
+    }
+    #sidebar.hidden {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(4px);
+    }
+
+    /* Scroll area for buttons */
+    .btn-list {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1px;
+      width: 100%;
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      scrollbar-width: none;
+      padding: 0 5px;
+    }
+    .btn-list::-webkit-scrollbar { display: none; }
+
+    /* Control button */
+    .ctrl-btn {
+      width: 44px;
+      height: 40px;
+      background: transparent;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: rgba(200, 200, 215, 0.80);
+      font-size: 20px;
+      position: relative;
+      transition: background 0.10s ease, color 0.10s ease, transform 0.08s ease;
+      padding: 0;
+      line-height: 1;
+      flex-shrink: 0;
+      outline: none;
+    }
+    .ctrl-btn:hover {
+      background: rgba(99, 102, 241, 0.16);
+      color: #e0e0ff;
+    }
+    .ctrl-btn:active {
+      background: rgba(99, 102, 241, 0.32);
+      transform: scale(0.90);
+    }
+
+    .f-key {
+      font-size: 8px;
+      font-weight: 700;
+      color: rgba(99, 102, 241, 0.65);
+      letter-spacing: 0.3px;
+      line-height: 1;
+      margin-top: 1px;
+      font-family: 'Consolas', 'Courier New', monospace;
+    }
+
+    /* State classes */
+    .ctrl-btn.btn-active {
+      background: rgba(99, 102, 241, 0.18);
+      color: #a5b4fc;
+    }
+    .ctrl-btn.screen-off-active {
+      background: rgba(56, 189, 248, 0.12);
+      color: #7dd3fc;
+    }
+    .ctrl-btn.audio-active {
+      background: rgba(52, 211, 153, 0.12);
+      color: #6ee7b7;
+    }
+    .ctrl-btn.recording {
+      color: #ef4444;
+      animation: pulse-rec 1.1s ease infinite;
+    }
+    @keyframes pulse-rec {
+      0%, 100% { background: rgba(239,68,68,0.08); }
+      50%       { background: rgba(239,68,68,0.22); }
+    }
+
+    /* Collapse button */
+    .ctrl-btn.btn-collapse {
+      color: rgba(148, 163, 184, 0.55);
+      font-size: 11px;
+    }
+    .ctrl-btn.btn-collapse:hover {
+      background: rgba(239, 68, 68, 0.10);
+      color: #f87171;
+    }
+
+    /* Divider */
+    .divider {
+      width: 38px;
+      height: 1px;
+      background: rgba(255,255,255,0.055);
+      flex-shrink: 0;
+      margin: 2px 0;
+    }
+
+    /* Tooltip: appears to the LEFT of button */
+    .ctrl-btn::after {
+      content: attr(data-tooltip);
+      position: fixed;
+      top: auto;
+      right: 58px;
+      background: rgba(8, 8, 16, 0.96);
+      border: 1px solid rgba(99, 102, 241, 0.35);
+      color: #e2e8f0;
+      font-size: 11px;
+      font-family: 'Segoe UI', system-ui;
+      padding: 4px 9px;
+      border-radius: 5px;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.10s ease;
+      z-index: 9999;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.5);
+    }
+    .ctrl-btn:hover::after { opacity: 1; }
+  </style>
+</head>
+<body>
+
+<!-- Transparent zone – mouse clicks pass through to scrcpy -->
+<div id="mirror-zone"></div>
+
+<!-- Sidebar wrapper -->
+<div id="sidebar-wrap">
+
+  <!-- Collapsed tab (shown when sidebar hidden) -->
+  <div id="mini-tab" title="Mở panel (F12)">
+    <span id="mini-tab-arrow">▶ ▶</span>
+  </div>
+
+  <!-- Expanded sidebar -->
+  <div id="sidebar">
+    <div class="btn-list" id="btn-list">
+
+      <!-- Group 1: Navigation -->
+      <button class="ctrl-btn" data-key="3"   data-tooltip="Trang chủ (F1)">🏠<span class="f-key">F1</span></button>
+      <button class="ctrl-btn" data-key="4"   data-tooltip="Quay lại (F2)">⬅<span class="f-key">F2</span></button>
+      <button class="ctrl-btn" data-key="187" data-tooltip="Gần đây (F3)">▢<span class="f-key">F3</span></button>
+
+      <div class="divider"></div>
+
+      <!-- Group 2: Screen & Input -->
+      <button class="ctrl-btn" data-key="rotate"    data-tooltip="Xoay màn hình (F4)">🔄<span class="f-key">F4</span></button>
+      <button class="ctrl-btn" data-key="password"  data-tooltip="Mật khẩu / PIN (F5)">🔑<span class="f-key">F5</span></button>
+      <button class="ctrl-btn" data-key="screen-off" id="btn-screen-off" data-tooltip="Tắt/Mở màn hình (F6)">🌙<span class="f-key">F6</span></button>
+
+      <div class="divider"></div>
+
+      <!-- Group 3: Volume & Power -->
+      <button class="ctrl-btn" data-key="26" data-tooltip="Nguồn (F7)">🔌<span class="f-key">F7</span></button>
+      <button class="ctrl-btn" data-key="25" data-tooltip="Giảm âm lượng (F8)">🔉<span class="f-key">F8</span></button>
+      <button class="ctrl-btn" data-key="24" data-tooltip="Tăng âm lượng (F9)">🔊<span class="f-key">F9</span></button>
+
+      <div class="divider"></div>
+
+      <!-- Group 4: Media & Capture -->
+      <button class="ctrl-btn" id="btn-toggle-audio" data-tooltip="Âm thanh PC (F10)">🎧<span class="f-key">F10</span></button>
+      <button class="ctrl-btn" id="btn-record" data-key="record" data-tooltip="Ghi màn hình (F11)">⏺<span class="f-key">F11</span></button>
+      <button class="ctrl-btn" data-key="screenshot" data-tooltip="Chụp ảnh màn hình">📸</button>
+
+      <div class="divider"></div>
+
+      <!-- Group 5: Window Controls -->
+      <button class="ctrl-btn" id="btn-mirror-pin" data-tooltip="Ghim Mirror luôn trên cùng">📌</button>
+      <button class="ctrl-btn btn-collapse" id="btn-collapse" data-tooltip="Thu nhỏ panel (F12)">◀ ẩn</button>
+    </div>
+  </div>
+
+</div><!-- /sidebar-wrap -->
+
+<script>
+  /* ── State ── */
+  let isRecording    = false;
+  let isAudioForward = false;
+  let screenOffState = false;
+  let isMirrorPinned = false;
+  let isSidebarOpen  = true;
+
+  const sidebar     = document.getElementById('sidebar');
+  const miniTab     = document.getElementById('mini-tab');
+  const sidebarWrap = document.getElementById('sidebar-wrap');
+
+  /* ─────────────────────────────────────────
+     Mouse passthrough: default = pass through.
+     When mouse enters sidebar-wrap → capture.
+     When mouse leaves → pass through again.
+  ───────────────────────────────────────── */
+  sidebarWrap.addEventListener('mouseenter', () => {
+    window.api.setIgnoreMouseEvents(false);
+  });
+  sidebarWrap.addEventListener('mouseleave', () => {
+    window.api.setIgnoreMouseEvents(true, { forward: true });
+  });
+
+  // Set passthrough on load
+  window.addEventListener('load', () => {
+    window.api.setIgnoreMouseEvents(true, { forward: true });
+  });
+
+  /* ─────────────────────────────────────────
+     Collapse / Expand sidebar
+  ───────────────────────────────────────── */
+  function collapseSidebar() {
+    isSidebarOpen = false;
+    sidebar.classList.add('hidden');
+    miniTab.classList.add('visible');
+    sidebarWrap.style.width = '16px';
+    window.api.setSidebarState(false);
+  }
+
+  function expandSidebar() {
+    isSidebarOpen = true;
+    sidebar.classList.remove('hidden');
+    miniTab.classList.remove('visible');
+    sidebarWrap.style.width = '48px';
+    window.api.setSidebarState(true);
+  }
+
+  document.getElementById('btn-collapse').addEventListener('click', collapseSidebar);
+  miniTab.addEventListener('click', expandSidebar);
+
+  /* F12 toggle from main process */
+  if (window.api.onToggleSidebar) {
+    window.api.onToggleSidebar(() => {
+      if (isSidebarOpen) collapseSidebar(); else expandSidebar();
+    });
+  }
+
+  /* ─────────────────────────────────────────
+     Audio state sync
+  ───────────────────────────────────────── */
+  function updateAudioUI(enabled) {
+    isAudioForward = enabled;
+    const btn = document.getElementById('btn-toggle-audio');
+    if (!btn) return;
+    btn.classList.toggle('audio-active', enabled);
+    btn.setAttribute('data-tooltip', `Âm thanh PC: ${enabled ? '🔵 BẬT' : '⚪ TẮT'} (F10)`);
+  }
+
+  if (window.api.getAudioState) window.api.getAudioState().then(updateAudioUI);
+  if (window.api.onUpdateAudioState) window.api.onUpdateAudioState(updateAudioUI);
+
+  /* ─────────────────────────────────────────
+     Action dispatcher
+  ───────────────────────────────────────── */
+  function triggerAction(action) {
+    switch (action) {
+      case 'password':
+        window.api.executeControllerKey('password');
+        break;
+      case 'audio-toggle':
+        window.api.toggleAudioForwardState();
+        break;
+      case 'screen-off': {
+        screenOffState = !screenOffState;
+        const btn = document.getElementById('btn-screen-off');
+        if (btn) {
+          btn.classList.toggle('screen-off-active', screenOffState);
+          btn.setAttribute('data-tooltip', screenOffState ? 'Mở màn hình (F6)' : 'Tắt/Mở màn hình (F6)');
+          btn.textContent = ''; // clear
+          btn.innerHTML = (screenOffState ? '☀️' : '🌙') + '<span class="f-key">F6</span>';
+        }
+        window.api.executeControllerKey(screenOffState ? 'screen-off' : 'screen-on');
+        break;
+      }
+      case 'record-toggle': {
+        isRecording = !isRecording;
+        const btn = document.getElementById('btn-record');
+        if (btn) {
+          btn.classList.toggle('recording', isRecording);
+          btn.setAttribute('data-tooltip', isRecording ? 'Dừng ghi hình (F11)' : 'Ghi màn hình (F11)');
+          btn.innerHTML = (isRecording ? '⏹' : '⏺') + '<span class="f-key">F11</span>';
+        }
+        window.api.executeControllerKey(isRecording ? 'record-start' : 'record-stop');
+        break;
+      }
+      default:
+        window.api.executeControllerKey(action);
+    }
+  }
+
+  /* F-key triggers from main process global shortcuts */
+  if (window.api.onTriggerFKeyAction) {
+    window.api.onTriggerFKeyAction(action => triggerAction(action));
+  }
+
+  /* ─────────────────────────────────────────
+     Mirror always-on-top pin
+  ───────────────────────────────────────── */
+  document.getElementById('btn-mirror-pin').addEventListener('click', () => {
+    isMirrorPinned = !isMirrorPinned;
+    const btn = document.getElementById('btn-mirror-pin');
+    btn.classList.toggle('btn-active', isMirrorPinned);
+    btn.setAttribute('data-tooltip',
+      isMirrorPinned ? 'Mirror: 📌 Đang ghim trên cùng' : 'Ghim Mirror luôn trên cùng');
+    window.api.setMirrorAlwaysOnTop(isMirrorPinned);
+  });
+
+  /* ─────────────────────────────────────────
+     Button click → action mapping
+  ───────────────────────────────────────── */
+  document.querySelectorAll('.ctrl-btn[data-key]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.getAttribute('data-key');
+      if      (key === 'record')     triggerAction('record-toggle');
+      else if (key === 'screen-off') triggerAction('screen-off');
+      else                           triggerAction(key);
+    });
+  });
+
+  document.getElementById('btn-toggle-audio').addEventListener('click', () => {
+    triggerAction('audio-toggle');
+  });
+
+  /* ─────────────────────────────────────────
+     Local F-key when window has focus
+  ───────────────────────────────────────── */
+  document.addEventListener('keydown', e => {
+    const map = {
+      F1: '3', F2: '4', F3: '187', F4: 'rotate', F5: 'password',
+      F6: 'screen-off', F7: '26', F8: '25', F9: '24',
+      F10: 'audio-toggle', F11: 'record-toggle',
+      F12: 'toggle-sidebar'
+    };
+    const action = map[e.key];
+    if (!action) return;
+    e.preventDefault();
+    if (action === 'toggle-sidebar') {
+      if (isSidebarOpen) collapseSidebar(); else expandSidebar();
+    } else {
+      triggerAction(action);
+    }
+  });
+</script>
+</body>
+</html>
