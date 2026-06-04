@@ -171,6 +171,26 @@
                 </div>
               </div>
 
+              <!-- PC to Phone Audio Share Card -->
+              <div class="card audio-share-card" style="flex-shrink: 0; margin-top: 10px;">
+                <div class="card-header">
+                  <h3>PC to Phone Audio Stream</h3>
+                  <span class="badge" id="audio-share-status" style="background: rgba(136, 19, 55, 0.05); color: #881337; border-color: rgba(136, 19, 55, 0.15);">Stopped</span>
+                </div>
+                <div class="card-body">
+                  <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                    <button class="btn btn-primary" id="btn-start-audio-share" style="flex: 1; background: #881337; border-color: #881337;">🔊 Start Audio</button>
+                    <button class="btn btn-secondary" id="btn-stop-audio-share" style="flex: 1;">⏹ Stop Audio</button>
+                  </div>
+                  
+                  <label class="checkbox-container">
+                    <input type="checkbox" id="opt-auto-audio-share" checked>
+                    <span class="checkmark"></span>
+                    Auto-start Audio Share when mirroring
+                  </label>
+                </div>
+              </div>
+
             </div>
           </div>
         </section>

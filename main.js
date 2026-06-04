@@ -31,8 +31,8 @@ function runBackgroundCleanUp() {
   stopScrcpyTracking();
   try { globalShortcut.unregisterAll(); } catch (_) {}
 
-  // Force-kill scrcpy, adb, and any other WprScrcpy/AeroScrcpy/electron processes immediately (except current PID)
-  const killCmd = `powershell -NoProfile -Command "Get-Process -Name WprScrcpy, AeroScrcpy, electron, scrcpy, adb -ErrorAction SilentlyContinue | Where-Object { $_.Id -ne ${process.pid} } | Stop-Process -Force"`;
+  // Force-kill scrcpy, adb, and any other WprScrcpy/AeroScrcpy/electron/AudioShareServer processes immediately (except current PID)
+  const killCmd = `powershell -NoProfile -Command "Get-Process -Name WprScrcpy, AeroScrcpy, electron, scrcpy, adb, AudioShareServer -ErrorAction SilentlyContinue | Where-Object { $_.Id -ne ${process.pid} } | Stop-Process -Force"`;
   exec(killCmd, { windowsHide: true });
   spawnedPids.forEach(pid => {
     try { exec(`taskkill /F /PID ${pid}`, { windowsHide: true }); } catch (_) {}

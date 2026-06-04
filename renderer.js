@@ -439,6 +439,13 @@ async function startScrcpyMirror(deviceId) {
   if (mirrorRes.success) {
     isMirroringActive = true;
     appendTerminalLine(`Opened mirror window for device ${deviceId}`, 'success-line');
+    
+    // Auto-start Audio Share if option checked
+    const optAutoAudio = document.getElementById('opt-auto-audio-share');
+    if (optAutoAudio && optAutoAudio.checked) {
+      startAudioShare();
+    }
+
     // Automatically launch the floating controller bar after a brief delay to sit strictly on top of scrcpy window
     setTimeout(() => {
       if (window.api && window.api.toggleControllerWindow) {
@@ -1551,6 +1558,13 @@ if (window.api && window.api.onTerminalOutputSystem) {
 if (window.api && window.api.onMirrorStatusChanged) {
   window.api.onMirrorStatusChanged((active) => {
     isMirroringActive = active;
+    if (!active) {
+      // Auto-stop Audio Share if option checked
+      const optAutoAudio = document.getElementById('opt-auto-audio-share');
+      if (optAutoAudio && optAutoAudio.checked) {
+        stopAudioShare();
+      }
+    }
   });
 }
 
@@ -1572,3 +1586,83 @@ async function initializeApp() {
   appendTerminalLine('[Auto] App initialization finished.', 'success-line');
 }
 initializeApp();
+
+// ─── PC-to-Phone Audio Share Functions ───
+let isAudioSharingActive = false;
+
+async function startAudioShare() {
+  const btnStart = document.getElementById('btn-start-audio-share');
+  const badge = document.getElementById('audio-share-status');
+  
+  if (isAudioSharingActive) return;
+  
+  appendTerminalLine('[Audio Share] Starting AudioShareServer.exe on PC (minimized)...', 'system-line');
+  if (btnStart) {
+    btnStart.disabled = true;
+    btnStart.innerText = 'Starting...';
+  }
+  
+  // Launch server on PC (minimized mode)
+  await window.api.executeCommand('powershell -Command "Start-Process -FilePath \'D:\\AT\\Phone\\AudioShareServer\\AudioShareServer.exe\' -WindowStyle Minimized"');
+  
+  // Start client on target phone
+  if (selectedDeviceId) {
+    appendTerminalLine(`[Audio Share] Starting client app on target device: ${selectedDeviceId}`, 'system-line');
+    await window.api.executeCommand(`adb -s ${selectedDeviceId} shell monkey -p io.github.mkckr0.audio_share_app -c android.intent.category.LAUNCHER 1`);
+  } else {
+    appendTerminalLine('[Audio Share] Info: No device selected. Start client app manually on your phone.', 'info-line');
+  }
+  
+  isAudioSharingActive = true;
+  if (btnStart) {
+    btnStart.disabled = false;
+    btnStart.innerText = '🔊 Start Audio';
+  }
+  if (badge) {
+    badge.innerText = 'Active';
+    badge.style.backgroundColor = 'rgba(16, 185, 129, 0.08)';
+    badge.style.color = '#10b981';
+    badge.style.borderColor = 'rgba(16, 185, 129, 0.15)';
+  }
+}
+
+async function stopAudioShare() {
+  const badge = document.getElementById('audio-share-status');
+  
+  appendTerminalLine('[Audio Share] Stopping audio stream...', 'system-line');
+  
+  // Close server on PC
+  await window.api.executeCommand('taskkill /f /im AudioShareServer.exe');
+  
+  // Force stop client on phone
+  if (selectedDeviceId) {
+    await window.api.executeCommand(`adb -s ${selectedDeviceId} shell am force-stop io.github.mkckr0.audio_share_app`);
+  }
+  
+  isAudioSharingActive = false;
+  if (badge) {
+    badge.innerText = 'Stopped';
+    badge.style.backgroundColor = 'rgba(136, 19, 55, 0.05)';
+    badge.style.color = '#881337';
+    badge.style.borderColor = 'rgba(136, 19, 55, 0.15)';
+  }
+}
+
+// Bind Button Listeners
+setTimeout(() => {
+  const btnStartAudio = document.getElementById('btn-start-audio-share');
+  const btnStopAudio = document.getElementById('btn-stop-audio-share');
+  
+  if (btnStartAudio) {
+    btnStartAudio.addEventListener('click', (e) => {
+      e.preventDefault();
+      startAudioShare();
+    });
+  }
+  if (btnStopAudio) {
+    btnStopAudio.addEventListener('click', (e) => {
+      e.preventDefault();
+      stopAudioShare();
+    });
+  }
+}, 1000);
