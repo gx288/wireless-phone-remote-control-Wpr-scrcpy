@@ -18,6 +18,7 @@ let isQuitting = false;
 let isMirrorPinned = false;
 let pendingWindowX = null;
 let pendingWindowY = null;
+let wereFKeysRegistered = false;
 
 function runBackgroundCleanUp() {
   if (isQuitting) return;
@@ -157,7 +158,7 @@ function startScrcpyTracking() {
     try { boundsProc.kill(); } catch (_) {}
   }
   notFoundCount = 0;
-  let wereFKeysRegistered = false;
+  wereFKeysRegistered = false;
 
   // Start the helper as a single long-running background process directly without shell wrapper to allow clean termination
   boundsProc = spawn(BOUNDS_EXE, [], { windowsHide: true });
@@ -275,6 +276,10 @@ function stopScrcpyTracking() {
   notFoundCount = 0;
   if (overlayWindow && !overlayWindow.isDestroyed()) {
     try { overlayWindow.hide(); } catch (_) {}
+  }
+  if (wereFKeysRegistered) {
+    try { globalShortcut.unregisterAll(); } catch (_) {}
+    wereFKeysRegistered = false;
   }
 }
 
