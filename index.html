@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -14,7 +14,7 @@
       <div class="logo-area">
         <div class="logo-icon">🚀</div>
         <div class="logo-text">
-          <h1>WprScrcpy <span style="font-size:11px;color:#818cf8;font-weight:400;">v2</span></h1>
+          <h1>WprScrcpy <span id="app-version" style="font-size:11px;color:#818cf8;font-weight:400;">v3.0.1</span></h1>
           <span>Mirror Overlay</span>
         </div>
       </div>
@@ -230,18 +230,18 @@
                 </div>
 
                 <div class="status-console-card" style="border-top: 1px dashed var(--glass-border); padding-top: 8px; margin-top: 8px; width: 100%;">
-                  <h4>Hướng dẫn kết nối nhanh:</h4>
+                  <h4>Quick Connection Guide:</h4>
                   <ul style="font-size: 11px; color: var(--text-secondary); padding-left: 14px; line-height: 1.4; display: flex; flex-direction: column; gap: 4.5px; text-align: left;">
-                    <li>Đảm bảo điện thoại và máy tính kết nối chung mạng Wi-Fi.</li>
-                    <li>Vào <b>Cài đặt nhà phát triển</b> -> Bật <strong>Gỡ lỗi không dây</strong> (Wireless Debugging).</li>
-                    <li><strong>Cách quét QR:</strong> Nhấn "Ghép nối thiết bị bằng mã QR" trên điện thoại rồi đưa camera quét mã QR của app.</li>
-                    <li><strong>Cách nhập tay bằng mã PIN:</strong>
+                    <li>Ensure both the phone and PC are connected to the same Wi-Fi network.</li>
+                    <li>Go to <b>Developer Options</b> -> Enable <strong>Wireless Debugging</strong>.</li>
+                    <li><strong>QR Code Scan:</strong> Tap "Pair device with QR code" on the phone and scan the QR code above.</li>
+                    <li><strong>Manual Connection via PIN:</strong>
                       <ul style="padding-left: 12px; margin-top: 2px; list-style-type: circle; display: flex; flex-direction: column; gap: 2px;">
-                        <li>Trên điện thoại, nhấn <b>"Ghép nối thiết bị bằng mã ghép nối"</b>.</li>
-                        <li><strong>Mã PIN (6 số)</strong> hiển thị chính là <b>Pairing PIN</b>.</li>
-                        <li>Số cổng 5 chữ số sau dấu hai chấm của địa chỉ IP chính là <b>Pair Port</b>.</li>
-                        <li>Nhập hai thông tin này vào cột bên rồi chạy kịch bản để ghép nối.</li>
-                        <li>Sau khi ghép nối thành công, tắt bảng popup ghép nối của điện thoại, số cổng mới hiển thị ở mục chính "Địa chỉ IP và cổng" của điện thoại chính là <b>Connection Port</b> (Cổng kết nối).</li>
+                        <li>On the phone, tap <b>"Pair device with pairing code"</b>.</li>
+                        <li>The <strong>6-digit PIN</strong> displayed is the <b>Pairing PIN</b>.</li>
+                        <li>The 5-digit port after the colon in the IP address is the <b>Pair Port</b>.</li>
+                        <li>Enter these two values into the input fields on the right, then run the script to pair.</li>
+                        <li>After pairing successfully, close the pairing popup on the phone. The new port displayed under "IP address & Port" on the main Wireless Debugging screen is the <b>Connection Port</b>.</li>
                       </ul>
                     </li>
                   </ul>

@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, globalShortcut, screen } = require('electron');
 const path = require('path');
-const { exec, spawn } = require('child_process');
+const { exec, spawn, execSync } = require('child_process');
+
 
 // ─── State ───────────────────────────────────────────────────────────────────
 let mainWindow       = null;
@@ -15,6 +16,8 @@ let lastOverlayBounds  = null;
 let spawnedPids = [];
 let isQuitting = false;
 let isMirrorPinned = false;
+let pendingWindowX = null;
+let pendingWindowY = null;
 
 function runBackgroundCleanUp() {
   if (isQuitting) return;
@@ -31,8 +34,15 @@ function runBackgroundCleanUp() {
   stopScrcpyTracking();
   try { globalShortcut.unregisterAll(); } catch (_) {}
 
-  // Force-kill scrcpy, adb, and any other WprScrcpy/AeroScrcpy/electron/AudioShareServer processes immediately (except current PID)
-  const killCmd = `powershell -NoProfile -Command "Get-Process -Name WprScrcpy, AeroScrcpy, electron, scrcpy, adb, AudioShareServer -ErrorAction SilentlyContinue | Where-Object { $_.Id -ne ${process.pid} } | Stop-Process -Force"`;
+  // Force stop Audio Share client app on connected phone before killing ADB
+  if (activeDeviceId) {
+    try {
+      execSync(`"${ADB_PATH}" -s ${activeDeviceId} shell am force-stop io.github.mkckr0.audio_share_app`, { windowsHide: true, timeout: 1000 });
+    } catch (_) {}
+  }
+
+  // Force-kill scrcpy, adb, AudioShareServer, and get_scrcpy_bounds processes immediately on exit
+  const killCmd = `powershell -NoProfile -Command "Get-Process -Name scrcpy, adb, AudioShareServer, get_scrcpy_bounds -ErrorAction SilentlyContinue | Stop-Process -Force"`;
   exec(killCmd, { windowsHide: true });
   spawnedPids.forEach(pid => {
     try { exec(`taskkill /F /PID ${pid}`, { windowsHide: true }); } catch (_) {}
@@ -84,7 +94,7 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1100,
     height: 750,
-    title: 'WprScrcpy v2 - Mirror Overlay',
+    title: `WprScrcpy v${app.getVersion()} - Mirror Overlay`,
     frame: true,
     backgroundColor: '#0f0f15',
     icon: path.join(__dirname, 'smartphone.png'),
@@ -139,86 +149,40 @@ function createOverlayWindow() {
 }
 
 // ─── scrcpy window position tracking ─────────────────────────────────────────
-function getScrcpyBounds(callback) {
-  exec(
-    `"${BOUNDS_EXE}"`,
-    { windowsHide: true, timeout: 2000 },
-    (err, stdout) => {
-      if (err || !stdout.trim()) return callback(null);
-      const parts = stdout.trim().split(/\s+/).map(Number);
-      if (parts.length === 5 && parts.slice(0, 4).every(isFinite)) {
-        const [L, T, R, B, isFg] = parts;
-        if (R > L && B > T) return callback({ x: L, y: T, width: R - L, height: B - T, isFg: isFg === 1 });
-      }
-      callback(null);
-    }
-  );
-}
 
-let notFoundCount = 0;
+let boundsProc = null;
 
 function startScrcpyTracking() {
-  if (scrcpyTrackInterval) clearInterval(scrcpyTrackInterval);
+  if (boundsProc) {
+    try { boundsProc.kill(); } catch (_) {}
+  }
   notFoundCount = 0;
   let wereFKeysRegistered = false;
 
-  scrcpyTrackInterval = setInterval(() => {
-    if (!overlayWindow || overlayWindow.isDestroyed()) return;
+  // Start the helper as a single long-running background process directly without shell wrapper to allow clean termination
+  boundsProc = spawn(BOUNDS_EXE, [], { windowsHide: true });
+  
+  let buffer = '';
+  boundsProc.stdout?.on('data', data => {
+    buffer += data.toString();
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || ''; // Hold onto incomplete line if any
 
-    getScrcpyBounds(bounds => {
-      if (bounds) {
-        notFoundCount = 0;
-        const sideW = isSidebarExpanded ? SIDEBAR_EXPANDED : SIDEBAR_COLLAPSED;
-        const ob = { x: bounds.x, y: bounds.y, width: bounds.width + sideW, height: bounds.height };
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
 
-        const shouldBeVisible = bounds.isFg || isMirrorPinned;
-        const shouldBeTopmost = bounds.isFg || isMirrorPinned;
-
-        if (shouldBeVisible) {
-          if (shouldBeTopmost) {
-            overlayWindow.setAlwaysOnTop(true, 'screen-saver');
-          } else {
-            overlayWindow.setAlwaysOnTop(false);
-          }
-          if (!overlayWindow.isVisible()) {
-            overlayWindow.show();
-          }
-        } else {
-          if (overlayWindow.isVisible()) {
+      if (trimmed === 'NOT_FOUND') {
+        notFoundCount++;
+        if (notFoundCount >= 20) {
+          if (overlayWindow && !overlayWindow.isDestroyed() && overlayWindow.isVisible()) {
             overlayWindow.hide();
           }
-        }
-
-        // Handle overlay shortcuts dynamically based on focus
-        if (bounds.isFg) {
-          if (!wereFKeysRegistered) {
-            registerFKeys();
-            wereFKeysRegistered = true;
+          if (isMirrorActive) {
+            isMirrorActive = false;
+            // Force-kill any background scrcpy process that hung or closed its window
+            exec('taskkill /F /IM scrcpy.exe', { windowsHide: true });
           }
-        } else {
-          if (wereFKeysRegistered) {
-            globalShortcut.unregisterAll();
-            wereFKeysRegistered = false;
-          }
-        }
-
-        // Only update if moved/resized by more than 3px to avoid jitter
-        const changed = !lastOverlayBounds ||
-          Math.abs(ob.x - lastOverlayBounds.x) > 3 ||
-          Math.abs(ob.y - lastOverlayBounds.y) > 3 ||
-          Math.abs(ob.width  - lastOverlayBounds.width)  > 5 ||
-          Math.abs(ob.height - lastOverlayBounds.height) > 5;
-
-        if (changed) {
-          lastOverlayBounds = ob;
-          overlayWindow.setBounds(ob);
-        }
-      } else {
-        notFoundCount++;
-        // Hide overlay after 3 missed polls (~900 ms)
-        if (notFoundCount >= 3 && overlayWindow.isVisible()) {
-          overlayWindow.hide();
-          isMirrorActive = false;
           lastOverlayBounds = null;
           if (mainWindow && !mainWindow.isDestroyed()) {
             mainWindow.webContents.send('mirror-status-changed', false);
@@ -227,19 +191,91 @@ function startScrcpyTracking() {
             globalShortcut.unregisterAll();
             wereFKeysRegistered = false;
           }
+          stopScrcpyTracking();
+        }
+      } else {
+        const parts = trimmed.split(/\s+/).map(Number);
+        if (parts.length === 5 && parts.slice(0, 4).every(isFinite)) {
+          const [L, T, R, B, isFg] = parts;
+          if (R > L && B > T) {
+            notFoundCount = 0;
+
+            // Apply pending startup window position to eliminate SDL aspect ratio drift
+            if (pendingWindowX !== null && pendingWindowY !== null) {
+              const px = pendingWindowX;
+              const py = pendingWindowY;
+              pendingWindowX = null;
+              pendingWindowY = null;
+              exec(`"${BOUNDS_EXE}" --set-pos ${px} ${py}`, { windowsHide: true });
+              return;
+            }
+
+            // Report bounds to renderer so they can be saved/remembered
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('scrcpy-bounds-updated', { x: L, y: T, width: R - L, height: B - T });
+            }
+
+            const sideW = isSidebarExpanded ? SIDEBAR_EXPANDED : SIDEBAR_COLLAPSED;
+            const ob = { x: L, y: T, width: (R - L) + sideW, height: B - T };
+
+            const shouldBeVisible = (isFg === 1) || isMirrorPinned;
+            const shouldBeTopmost = (isFg === 1) || isMirrorPinned;
+
+            if (shouldBeVisible) {
+              if (shouldBeTopmost) {
+                overlayWindow.setAlwaysOnTop(true, 'screen-saver');
+              } else {
+                overlayWindow.setAlwaysOnTop(false);
+              }
+              if (!overlayWindow.isVisible()) {
+                overlayWindow.show();
+              }
+            } else {
+              if (overlayWindow.isVisible()) {
+                overlayWindow.hide();
+              }
+            }
+
+            if (isFg === 1) {
+              if (!wereFKeysRegistered) {
+                registerFKeys();
+                wereFKeysRegistered = true;
+              }
+            } else {
+              if (wereFKeysRegistered) {
+                globalShortcut.unregisterAll();
+                wereFKeysRegistered = false;
+              }
+            }
+
+            // Only update overlay bounds if changed noticeably to reduce layout thrashing
+            const changed = !lastOverlayBounds ||
+              Math.abs(ob.x - lastOverlayBounds.x) > 3 ||
+              Math.abs(ob.y - lastOverlayBounds.y) > 3 ||
+              Math.abs(ob.width  - lastOverlayBounds.width)  > 5 ||
+              Math.abs(ob.height - lastOverlayBounds.height) > 5;
+
+            if (changed && overlayWindow && !overlayWindow.isDestroyed()) {
+              lastOverlayBounds = ob;
+              overlayWindow.setBounds(ob);
+            }
+          }
         }
       }
-    });
-  }, 300);
+    }
+  });
 }
 
 function stopScrcpyTracking() {
-  if (scrcpyTrackInterval) {
-    clearInterval(scrcpyTrackInterval);
-    scrcpyTrackInterval = null;
+  if (boundsProc) {
+    try { boundsProc.kill(); } catch (_) {}
+    boundsProc = null;
   }
   lastOverlayBounds = null;
   notFoundCount = 0;
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    try { overlayWindow.hide(); } catch (_) {}
+  }
 }
 
 // ─── F-key global shortcuts ───────────────────────────────────────────────────
@@ -363,10 +399,32 @@ ipcMain.handle('run-terminal-command', (event, { command, id }) => {
 ipcMain.handle('start-scrcpy', async (event, args) => {
   return new Promise(resolve => {
     try {
-      // Remove any pre-existing window positioning args (overlay handles it now)
-      const filteredArgs = args.filter(a =>
-        !a.startsWith('--window-x') && !a.startsWith('--window-y')
-      );
+      // Clean up any existing or hung scrcpy process first to avoid ADB port conflicts
+      try {
+        execSync('taskkill /F /IM scrcpy.exe', { windowsHide: true });
+      } catch (_) {}
+
+      // Intercept and extract window coordinates to position them using Win32 API
+      pendingWindowX = null;
+      pendingWindowY = null;
+      const xIdx = args.indexOf('--window-x');
+      if (xIdx !== -1) {
+        pendingWindowX = parseInt(args[xIdx + 1]);
+      }
+      const yIdx = args.indexOf('--window-y');
+      if (yIdx !== -1) {
+        pendingWindowY = parseInt(args[yIdx + 1]);
+      }
+
+      // Filter position and size out from scrcpy native startup args to prevent SDL offset/drift bugs
+      const filteredArgs = [];
+      for (let i = 0; i < args.length; i++) {
+        if (args[i] === '--window-x' || args[i] === '--window-y' || args[i] === '--window-width' || args[i] === '--window-height') {
+          i++; // Skip the parameter value as well!
+        } else {
+          filteredArgs.push(args[i]);
+        }
+      }
 
       // Add title so we can find it via Win32
       filteredArgs.push('--window-title', 'DeviceMirrorSession');
@@ -387,6 +445,7 @@ ipcMain.handle('start-scrcpy', async (event, args) => {
         resetInactivityTimer();
         if (spawnedPids.length === 0) {
           isMirrorActive = false;
+          stopScrcpyTracking();
           if (mainWindow && !mainWindow.isDestroyed()) {
             mainWindow.webContents.send('mirror-status-changed', false);
           }
@@ -475,14 +534,10 @@ ipcMain.handle('set-mirror-always-on-top', (event, pinned) => {
 
 // ─── IPC: Wake / Show scrcpy mirror window ───────────────────────────────────
 ipcMain.handle('show-mirror', () => {
-  return new Promise(resolve => {
-    // Bring window to top and send Alt+r (Scrcpy native shortcut to reset/restart the capture and decoder stream instantly)
-    // Alt+r is perfect for waking up the video rendering stream when screen wakes up!
-    const psCommand = `powershell -Command "$wshell = New-Object -ComObject wscript.shell; if ($wshell.AppActivate('DeviceMirrorSession')) { Start-Sleep -m 150; $wshell.SendKeys('%r') }"`;
-    exec(psCommand, { windowsHide: true }, () => {
-      resolve({ success: true });
-    });
-  });
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('trigger-relaunch-mirror');
+  }
+  return { success: true };
 });
 
 // ─── IPC: Quit clean ──────────────────────────────────────────────────────────
@@ -585,3 +640,7 @@ ipcMain.handle('show-password-prompt', () => {
 ipcMain.handle('execute-controller-key-from-main', async (event, key) => {
   return ipcMain.emit('execute-controller-key', event, key);
 });
+
+// ─── IPC: Get App Version ────────────────────────────────────────────────────
+ipcMain.handle('get-app-version', () => app.getVersion());
+

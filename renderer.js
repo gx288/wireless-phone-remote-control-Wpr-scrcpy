@@ -381,6 +381,27 @@ async function startScrcpyMirror(deviceId) {
 
   const args = ['-s', deviceId, '--window-title', 'DeviceMirrorSession', '--no-mouse-hover'];
   
+  // Restore window position and size if previously saved
+  try {
+    const savedBoundsStr = localStorage.getItem('wpr_mirror_bounds');
+    if (savedBoundsStr) {
+      const bounds = JSON.parse(savedBoundsStr);
+      if (bounds && bounds.x !== undefined && bounds.y !== undefined) {
+        // Clamp Y coordinate to 0 or greater to stick the window to the top edge and prevent title bar from going off-screen
+        let yCoord = bounds.y;
+        if (yCoord < 0) {
+          yCoord = 0;
+        }
+        args.push('--window-x', String(bounds.x), '--window-y', String(yCoord));
+        if (bounds.width && bounds.height) {
+          args.push('--window-width', String(bounds.width), '--window-height', String(bounds.height));
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Error loading saved mirror bounds:', e);
+  }
+  
   // Bitrate
   const br = scrcpyBitrate.value;
   if (br !== '0') {
@@ -510,48 +531,62 @@ async function generateWirelessQR() {
   }
 }
 
+let qrScanTimeoutId = null;
+let connectTimeoutId = null;
+
 function startScanningMdns() {
-  if (isScanningQR) {
-    stopScanningMdns();
-  }
+  stopScanningMdns();
   
   isScanningQR = true;
   qrMdnsLog.innerHTML = `[System] Waiting for QR Code scan...\n[mDNS] Listening for pairing service: "${currentPairingService}" on the network...\n`;
   
-  qrScanIntervalId = setInterval(async () => {
+  async function scanMdnsLoop() {
     if (!isScanningQR) return;
     
-    // Scan mDNS using the local adb services command
-    const res = await window.api.executeCommand('adb mdns services');
-    if (!res.success) return;
-    
-    const lines = res.stdout.split('\n');
-    for (let line of lines) {
-      // e.g., "_adb_secure_pairing._tcp.    wpr-123456.   192.168.1.100:43211"
-      if (line.includes('_adb_secure_pairing._tcp') && line.includes(currentPairingService)) {
-        stopScanningMdns();
-        
-        qrMdnsLog.innerHTML += `\n[FOUND] Pairing device detected!\nDetails: ${line.trim()}\n`;
-        
-        // Extract IP & Port
-        const match = line.match(/(\d+\.\d+\.\d+\.\d+):(\d+)/);
-        if (match) {
-          const ipPort = match[0];
-          performPairAndConnect(ipPort);
-        } else {
-          qrMdnsLog.innerHTML += `[Error] Cannot extract IP/Port from: ${line}\n`;
+    try {
+      // Scan mDNS using the local adb services command
+      const res = await window.api.executeCommand('adb mdns services');
+      if (!isScanningQR) return;
+      
+      if (res.success) {
+        const lines = res.stdout.split('\n');
+        for (let line of lines) {
+          // e.g., "_adb_secure_pairing._tcp.    wpr-123456.   192.168.1.100:43211"
+          if (line.includes('_adb_secure_pairing._tcp') && line.includes(currentPairingService)) {
+            stopScanningMdns();
+            
+            qrMdnsLog.innerHTML += `\n[FOUND] Pairing device detected!\nDetails: ${line.trim()}\n`;
+            
+            // Extract IP & Port
+            const match = line.match(/(\d+\.\d+\.\d+\.\d+):(\d+)/);
+            if (match) {
+              const ipPort = match[0];
+              performPairAndConnect(ipPort);
+            } else {
+              qrMdnsLog.innerHTML += `[Error] Cannot extract IP/Port from: ${line}\n`;
+            }
+            return;
+          }
         }
-        break;
       }
+    } catch (err) {
+      console.error('mDNS scan error:', err);
     }
-  }, 2000);
+    
+    // Schedule next scan only after the current one has finished
+    if (isScanningQR) {
+      qrScanTimeoutId = setTimeout(scanMdnsLoop, 2500);
+    }
+  }
+  
+  scanMdnsLoop();
 }
 
 function stopScanningMdns() {
   isScanningQR = false;
-  if (qrScanIntervalId) {
-    clearInterval(qrScanIntervalId);
-    qrScanIntervalId = null;
+  if (qrScanTimeoutId) {
+    clearTimeout(qrScanTimeoutId);
+    qrScanTimeoutId = null;
   }
 }
 
@@ -566,62 +601,74 @@ async function performPairAndConnect(ipPort) {
     
     // Now look for _adb_secure_connect._tcp to get the connect port
     let searchCount = 0;
-    const connectInterval = setInterval(async () => {
+    
+    if (connectTimeoutId) {
+      clearTimeout(connectTimeoutId);
+      connectTimeoutId = null;
+    }
+    
+    async function scanConnectLoop() {
       searchCount++;
-      const mdnsRes = await window.api.executeCommand('adb mdns services');
-      if (mdnsRes.success) {
-        const lines = mdnsRes.stdout.split('\n');
-        for (let line of lines) {
-          // Identify connect service
-          if (line.includes('_adb_secure_connect._tcp')) {
-            const ipMatch = line.match(/(\d+\.\d+\.\d+\.\d+):(\d+)/);
-            if (ipMatch) {
-              clearInterval(connectInterval);
-              const connectIpPort = ipMatch[0];
-              
-              qrMdnsLog.innerHTML += `\n[FOUND] Detected connect port: ${connectIpPort}\n`;
-              
-              const connRes = await executeStreamingCommand(`adb connect ${connectIpPort}`, qrMdnsLog);
-              if (connRes.success || connRes.stdout.includes('connected to')) {
-                const ipAddress = ipMatch[1];
-                qrMdnsLog.innerHTML += `\n[ADB] Connection successful. Switching permanent port to 5555 (tcpip 5555)...\n`;
+      try {
+        const mdnsRes = await window.api.executeCommand('adb mdns services');
+        if (mdnsRes.success) {
+          const lines = mdnsRes.stdout.split('\n');
+          for (let line of lines) {
+            // Identify connect service
+            if (line.includes('_adb_secure_connect._tcp')) {
+              const ipMatch = line.match(/(\d+\.\d+\.\d+\.\d+):(\d+)/);
+              if (ipMatch) {
+                const connectIpPort = ipMatch[0];
                 
-                const tcpipRes = await executeStreamingCommand(`adb -s ${connectIpPort} tcpip 5555`, qrMdnsLog);
-                if (tcpipRes.success) {
-                  qrMdnsLog.innerHTML += `\n[Wait] Waiting 2 seconds for phone to reconfigure network port...\n`;
-                  await new Promise(r => setTimeout(r, 2000));
+                qrMdnsLog.innerHTML += `\n[FOUND] Detected connect port: ${connectIpPort}\n`;
+                
+                const connRes = await executeStreamingCommand(`adb connect ${connectIpPort}`, qrMdnsLog);
+                if (connRes.success || connRes.stdout.includes('connected to')) {
+                  const ipAddress = ipMatch[1];
+                  qrMdnsLog.innerHTML += `\n[ADB] Connection successful. Switching permanent port to 5555 (tcpip 5555)...\n`;
                   
-                  qrMdnsLog.innerHTML += `\n[ADB] Connecting permanently to standard port 5555...\n`;
-                  const finalConnRes = await executeStreamingCommand(`adb connect ${ipAddress}:5555`, qrMdnsLog);
-                  
-                  if (finalConnRes.success || finalConnRes.stdout.includes('connected to') || finalConnRes.stdout.includes('already connected')) {
-                    qrMdnsLog.innerHTML += `\n🎉 PERMANENT WI-FI 5555 CONNECTION SUCCESSFUL!\n`;
-                    saveConnectedIp(ipAddress);
-                    refreshDevicesList();
+                  const tcpipRes = await executeStreamingCommand(`adb -s ${connectIpPort} tcpip 5555`, qrMdnsLog);
+                  if (tcpipRes.success) {
+                    qrMdnsLog.innerHTML += `\n[Wait] Waiting 2 seconds for phone to reconfigure network port...\n`;
+                    await new Promise(r => setTimeout(r, 2000));
+                    
+                    qrMdnsLog.innerHTML += `\n[ADB] Connecting permanently to standard port 5555...\n`;
+                    const finalConnRes = await executeStreamingCommand(`adb connect ${ipAddress}:5555`, qrMdnsLog);
+                    
+                    if (finalConnRes.success || finalConnRes.stdout.includes('connected to') || finalConnRes.stdout.includes('already connected')) {
+                      qrMdnsLog.innerHTML += `\n🎉 PERMANENT WI-FI 5555 CONNECTION SUCCESSFUL!\n`;
+                      saveConnectedIp(ipAddress);
+                      refreshDevicesList();
+                    } else {
+                      qrMdnsLog.innerHTML += `\n[FAIL] Permanent port 5555 connection failed. Maintaining temporary connection on port ${connectIpPort}.\n`;
+                      saveConnectedIp(ipAddress);
+                      refreshDevicesList();
+                    }
                   } else {
-                    qrMdnsLog.innerHTML += `\n[FAIL] Permanent port 5555 connection failed. Maintaining temporary connection on port ${connectIpPort}.\n`;
+                    qrMdnsLog.innerHTML += `\n[WARNING] Cannot switch to port 5555. Maintaining temporary connection on port ${connectIpPort}.\n`;
                     saveConnectedIp(ipAddress);
                     refreshDevicesList();
                   }
                 } else {
-                  qrMdnsLog.innerHTML += `\n[WARNING] Cannot switch to port 5555. Maintaining temporary connection on port ${connectIpPort}.\n`;
-                  saveConnectedIp(ipAddress);
-                  refreshDevicesList();
+                  qrMdnsLog.innerHTML += `\n[FAIL] Connection error!\n`;
                 }
-              } else {
-                qrMdnsLog.innerHTML += `\n[FAIL] Connection error!\n`;
+                return;
               }
-              return;
             }
           }
         }
+      } catch (err) {
+        console.error('mDNS connect scan error:', err);
       }
       
       if (searchCount > 10) {
-        clearInterval(connectInterval);
         qrMdnsLog.innerHTML += `\n[WARNING] Could not automatically scan connect port.\nPlease use IP manual script or check IP:Port shown on phone to connect manually.\n`;
+      } else {
+        connectTimeoutId = setTimeout(scanConnectLoop, 2500);
       }
-    }, 2000);
+    }
+    
+    scanConnectLoop();
     
   } else {
     qrMdnsLog.innerHTML += `\n[FAIL] Pairing Failed!\n`;
@@ -1200,6 +1247,11 @@ async function executeShellCommand(command) {
         if (optTurnScreenOff && settings.turnScreenOff !== undefined) {
           optTurnScreenOff.checked = settings.turnScreenOff;
         }
+        
+        const optAutoAudio = document.getElementById('opt-auto-audio-share');
+        if (optAutoAudio) {
+          optAutoAudio.checked = settings.autoAudioShare !== undefined ? settings.autoAudioShare : false;
+        }
       } catch (e) {
         console.error('Error parsing device settings:', e);
       }
@@ -1215,6 +1267,9 @@ async function executeShellCommand(command) {
       optRecord.checked = false;
       const optTurnScreenOff = document.getElementById('opt-turn-screen-off');
       if (optTurnScreenOff) optTurnScreenOff.checked = false;
+      
+      const optAutoAudio = document.getElementById('opt-auto-audio-share');
+      if (optAutoAudio) optAutoAudio.checked = false;
     }
 
     // Load saved password specifically
@@ -1231,6 +1286,7 @@ async function executeShellCommand(command) {
   function saveDeviceSettings(id) {
     if (!id) return;
     const optTurnScreenOff = document.getElementById('opt-turn-screen-off');
+    const optAutoAudio = document.getElementById('opt-auto-audio-share');
     const settings = {
       resolution: scrcpyResolution.value,
       bitrate: scrcpyBitrate.value,
@@ -1240,7 +1296,8 @@ async function executeShellCommand(command) {
       audioForward: optAudioForward.checked,
       showTouches: optShowTouches.checked,
       record: optRecord.checked,
-      turnScreenOff: optTurnScreenOff ? optTurnScreenOff.checked : false
+      turnScreenOff: optTurnScreenOff ? optTurnScreenOff.checked : false,
+      autoAudioShare: optAutoAudio ? optAutoAudio.checked : false
     };
     localStorage.setItem(`wpr_device_settings_${id}`, JSON.stringify(settings));
   }
@@ -1261,7 +1318,8 @@ async function executeShellCommand(command) {
   // Bind change listeners to save settings automatically on user interaction
   setTimeout(() => {
     const optTurnScreenOff = document.getElementById('opt-turn-screen-off');
-    [scrcpyResolution, scrcpyBitrate, scrcpyFps, optAlwaysOnTop, optStayAwake, optAudioForward, optShowTouches, optRecord, optTurnScreenOff].forEach(input => {
+    const optAutoAudio = document.getElementById('opt-auto-audio-share');
+    [scrcpyResolution, scrcpyBitrate, scrcpyFps, optAlwaysOnTop, optStayAwake, optAudioForward, optShowTouches, optRecord, optTurnScreenOff, optAutoAudio].forEach(input => {
       if (input) {
         input.addEventListener('change', () => {
           if (selectedDeviceId) {
@@ -1568,16 +1626,42 @@ if (window.api && window.api.onMirrorStatusChanged) {
   });
 }
 
+// Listen to trigger-relaunch-mirror event to reconnect/relaunch mirroring
+if (window.api && window.api.onTriggerRelaunchMirror) {
+  window.api.onTriggerRelaunchMirror(() => {
+    if (selectedDeviceId) {
+      appendTerminalLine(`[System] Reconnecting / Relaunching mirror session to restore display...`, 'system-line');
+      window.api.executeCommand('taskkill /F /IM scrcpy.exe').then(() => {
+        setTimeout(() => {
+          startScrcpyMirror(selectedDeviceId);
+        }, 600);
+      });
+    }
+  });
+}
+
+// Listen to mirror window bounds updates and save them to local storage
+if (window.api && window.api.onScrcpyBoundsUpdated) {
+  window.api.onScrcpyBoundsUpdated((bounds) => {
+    if (bounds) {
+      localStorage.setItem('wpr_mirror_bounds', JSON.stringify(bounds));
+    }
+  });
+}
+
+
 // Initial App Setup in sequential async order
 async function initializeApp() {
-  updateWizardPlaceholders();
-  appendTerminalLine('[Auto] Initializing ADB server...', 'system-line');
-  const serverRes = await window.api.executeCommand('adb start-server');
-  if (serverRes.success) {
-    appendTerminalLine('[Auto] ADB server initialized successfully.', 'success-line');
-  } else {
-    appendTerminalLine('[Auto] ADB server failed to initialize: ' + serverRes.stderr, 'error-line');
+  // Get and display version dynamically from package.json
+  if (window.api && window.api.getAppVersion) {
+    window.api.getAppVersion().then(ver => {
+      const badge = document.getElementById('app-version');
+      if (badge) badge.innerText = `v${ver}`;
+      document.title = `WprScrcpy v${ver} - Mirror Overlay`;
+    });
   }
+
+  updateWizardPlaceholders();
   await checkAdbStatus();
   appendTerminalLine('[Auto] Checking previously connected devices...', 'system-line');
   await autoConnectSavedDevices();
@@ -1604,6 +1688,10 @@ async function startAudioShare() {
   
   // Launch server on PC (minimized mode)
   await window.api.executeCommand('powershell -Command "Start-Process -FilePath \'D:\\AT\\Phone\\AudioShareServer\\AudioShareServer.exe\' -WindowStyle Minimized"');
+  
+  // Switch Windows audio output to Virtual Speakers (AudioRelay)
+  appendTerminalLine('[Audio Share] Switching Windows playback device to "Virtual Speakers"...', 'system-line');
+  await window.api.executeCommand('nircmd.exe setdefaultsounddevice "Virtual Speakers"');
   
   // Start client on target phone
   if (selectedDeviceId) {
@@ -1633,6 +1721,10 @@ async function stopAudioShare() {
   
   // Close server on PC
   await window.api.executeCommand('taskkill /f /im AudioShareServer.exe');
+  
+  // Switch Windows audio output back to Speakers (USB Audio Device)
+  appendTerminalLine('[Audio Share] Restoring Windows playback device to "Speakers (USB Audio Device)"...', 'system-line');
+  await window.api.executeCommand('nircmd.exe setdefaultsounddevice \"Speakers (USB Audio Device)\"');
   
   // Force stop client on phone
   if (selectedDeviceId) {

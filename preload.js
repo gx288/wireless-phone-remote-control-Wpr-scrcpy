@@ -76,5 +76,16 @@ contextBridge.exposeInMainWorld('api', {
     const listener = (_, active) => callback(active);
     ipcRenderer.on('mirror-status-changed', listener);
     return () => ipcRenderer.removeListener('mirror-status-changed', listener);
-  }
+  },
+  onTriggerRelaunchMirror: (callback) => {
+    const listener = () => callback();
+    ipcRenderer.on('trigger-relaunch-mirror', listener);
+    return () => ipcRenderer.removeListener('trigger-relaunch-mirror', listener);
+  },
+  onScrcpyBoundsUpdated: (callback) => {
+    const listener = (_, bounds) => callback(bounds);
+    ipcRenderer.on('scrcpy-bounds-updated', listener);
+    return () => ipcRenderer.removeListener('scrcpy-bounds-updated', listener);
+  },
+  getAppVersion: () => ipcRenderer.invoke('get-app-version')
 });

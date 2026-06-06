@@ -7,6 +7,10 @@ class Program {
     [DllImport("user32.dll", SetLastError = true)]
     public static extern bool GetWindowRect(IntPtr hWnd, ref RECT lpRect);
 
+    [DllImport("dwmapi.dll")]
+    public static extern int DwmGetWindowAttribute(IntPtr hwnd, int dwAttribute, out RECT pvAttribute, int cbAttribute);
+
+
     [DllImport("user32.dll")]
     public static extern IntPtr GetForegroundWindow();
 
@@ -33,49 +37,73 @@ class Program {
     const uint SWP_NOACTIVATE = 0x0010;
 
     static void Main(string[] args) {
-        // Find scrcpy window.
-        Process[] procs = Process.GetProcessesByName("scrcpy");
-        IntPtr scrcpyHwnd = IntPtr.Zero;
-        foreach (var p in procs) {
-            if (p.MainWindowHandle != IntPtr.Zero) {
-                scrcpyHwnd = p.MainWindowHandle;
-                break;
-            }
-        }
-
-        if (scrcpyHwnd == IntPtr.Zero) {
-            Environment.Exit(1);
-        }
-
         // Find overlay window.
         IntPtr overlayHwnd = FindWindowByTitle("AeroScrcpyOverlayWindow");
 
-        // Handle Pin/Unpin if requested via arguments
+        // Handle Pin/Unpin/Set-Pos if requested via arguments
         if (args.Length > 0) {
+            // Find scrcpy window for one-shot commands
+            Process[] procsOne = Process.GetProcessesByName("scrcpy");
+            IntPtr scrcpyHwndOne = IntPtr.Zero;
+            foreach (var p in procsOne) {
+                if (p.MainWindowHandle != IntPtr.Zero) {
+                    scrcpyHwndOne = p.MainWindowHandle;
+                    break;
+                }
+            }
+            if (scrcpyHwndOne == IntPtr.Zero) {
+                Environment.Exit(1);
+            }
+
             if (args[0] == "--pin") {
-                SetWindowPos(scrcpyHwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+                SetWindowPos(scrcpyHwndOne, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
                 Console.WriteLine("Pinned");
                 return;
             } else if (args[0] == "--unpin") {
-                SetWindowPos(scrcpyHwnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+                SetWindowPos(scrcpyHwndOne, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
                 Console.WriteLine("Unpinned");
+                return;
+            } else if (args[0] == "--set-pos" && args.Length >= 3) {
+                int x = int.Parse(args[1]);
+                int y = int.Parse(args[2]);
+                if (y < 0) y = 0; // Force title bar to remain on screen
+                SetWindowPos(scrcpyHwndOne, IntPtr.Zero, x, y, 0, 0, SWP_NOSIZE | SWP_NOACTIVATE);
+                Console.WriteLine("Positioned to " + x + ", " + y);
                 return;
             }
         }
 
-        RECT rect = new RECT();
-        if (GetWindowRect(scrcpyHwnd, ref rect)) {
-            IntPtr fg = GetForegroundWindow();
-            int isFg = 0;
-            if (fg == scrcpyHwnd || (overlayHwnd != IntPtr.Zero && fg == overlayHwnd)) {
-                isFg = 1;
+        // Persistent tracking loop
+        while (true) {
+            Process[] procs = Process.GetProcessesByName("scrcpy");
+            IntPtr scrcpyHwnd = IntPtr.Zero;
+            foreach (var p in procs) {
+                if (p.MainWindowHandle != IntPtr.Zero) {
+                    scrcpyHwnd = p.MainWindowHandle;
+                    break;
+                }
             }
-            if (IsIconic(scrcpyHwnd)) {
-                isFg = 0;
+
+            if (scrcpyHwnd != IntPtr.Zero) {
+                RECT rect = new RECT();
+                if (GetWindowRect(scrcpyHwnd, ref rect)) {
+                    IntPtr fg = GetForegroundWindow();
+                    int isFg = 0;
+                    if (fg == scrcpyHwnd || (overlayHwnd != IntPtr.Zero && fg == overlayHwnd)) {
+                        isFg = 1;
+                    }
+                    if (IsIconic(scrcpyHwnd)) {
+                        isFg = 0;
+                    }
+                    Console.WriteLine("{0} {1} {2} {3} {4}", rect.Left, rect.Top, rect.Right, rect.Bottom, isFg);
+                } else {
+                    Console.WriteLine("NOT_FOUND");
+                }
+            } else {
+                Console.WriteLine("NOT_FOUND");
             }
-            Console.WriteLine("{0} {1} {2} {3} {4}", rect.Left, rect.Top, rect.Right, rect.Bottom, isFg);
-        } else {
-            Environment.Exit(1);
+
+            System.Threading.Thread.Sleep(250);
         }
     }
 
