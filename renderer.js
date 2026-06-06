@@ -1687,7 +1687,7 @@ async function startAudioShare() {
   }
   
   // Launch server on PC (minimized mode)
-  await window.api.executeCommand('powershell -Command "Start-Process -FilePath \'D:\\AT\\Phone\\AudioShareServer\\AudioShareServer.exe\' -WindowStyle Minimized"');
+  await window.api.executeCommand('powershell -Command "Start-Process -FilePath \'.\\AudioShareServer.exe\' -WindowStyle Minimized"');
   
   // Switch Windows audio output to Virtual Speakers (AudioRelay)
   appendTerminalLine('[Audio Share] Switching Windows playback device to "Virtual Speakers"...', 'system-line');
