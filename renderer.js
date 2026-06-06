@@ -1701,6 +1701,17 @@ async function startAudioShare() {
     appendTerminalLine('[Audio Share] Info: No device selected. Start client app manually on your phone.', 'info-line');
   }
   
+  // Detect and display PC IP address for easy typing on the phone
+  const ipconfigRes = await window.api.executeCommand('ipconfig');
+  let localIp = 'Unknown';
+  if (ipconfigRes.success) {
+    const match = ipconfigRes.stdout.match(/IPv4 Address[\s.:]+(192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)/);
+    if (match) {
+      localIp = match[1];
+    }
+  }
+  appendTerminalLine(`[Audio Share] PC Local IP is: ${localIp}. Please type this IP in the Audio Share app on your phone!`, 'info-line');
+  
   isAudioSharingActive = true;
   if (btnStart) {
     btnStart.disabled = false;
