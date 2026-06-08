@@ -356,7 +356,7 @@ function startScrcpyTracking() {
 
             if (isFg === 1) {
               if (!wereFKeysRegistered) {
-                // registerFKeys(); // Disabled to stop sending global shortcuts
+                registerFKeys();
                 wereFKeysRegistered = true;
               }
             } else {
