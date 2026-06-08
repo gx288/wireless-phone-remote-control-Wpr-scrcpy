@@ -386,7 +386,7 @@ async function startScrcpyMirror(deviceId) {
     const savedBoundsStr = localStorage.getItem('wpr_mirror_bounds');
     if (savedBoundsStr) {
       const bounds = JSON.parse(savedBoundsStr);
-      if (bounds && bounds.x !== undefined && bounds.y !== undefined) {
+      if (bounds && bounds.x !== undefined && bounds.y !== undefined && bounds.x > -10000 && bounds.y > -10000) {
         // Clamp Y coordinate to 0 or greater to stick the window to the top edge and prevent title bar from going off-screen
         let yCoord = bounds.y;
         if (yCoord < 0) {

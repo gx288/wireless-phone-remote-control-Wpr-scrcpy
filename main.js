@@ -198,7 +198,7 @@ function startScrcpyTracking() {
         const parts = trimmed.split(/\s+/).map(Number);
         if (parts.length === 5 && parts.slice(0, 4).every(isFinite)) {
           const [L, T, R, B, isFg] = parts;
-          if (R > L && B > T) {
+          if (L > -10000 && T > -10000 && R > L && B > T) {
             notFoundCount = 0;
 
             // Apply pending startup window position to eliminate SDL aspect ratio drift
