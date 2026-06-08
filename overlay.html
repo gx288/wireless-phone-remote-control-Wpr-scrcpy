@@ -264,7 +264,7 @@
 
       <!-- Group 5: Window Controls -->
       <button class="ctrl-btn" id="btn-mirror-pin" data-tooltip="Pin Mirror on Top">📌</button>
-      <button class="ctrl-btn btn-collapse" id="btn-collapse" data-tooltip="Collapse panel (F12)">◀ hide</button>
+      <button class="ctrl-btn" id="btn-auto-hide" data-tooltip="Auto-hide: OFF (F12)">🙈<span class="f-key">F12</span></button>
     </div>
   </div>
 
@@ -300,32 +300,27 @@
   });
 
   /* ─────────────────────────────────────────
-     Collapse / Expand sidebar
+     Auto-hide Mirror on Leave
    ───────────────────────────────────────── */
-  function collapseSidebar() {
-    isSidebarOpen = false;
-    sidebar.classList.add('hidden');
-    miniTab.classList.add('visible');
-    sidebarWrap.style.width = '16px';
-    window.api.setSidebarState(false);
+  let isAutoHideEnabled = false;
+
+  function updateAutoHideUI(enabled) {
+    isAutoHideEnabled = enabled;
+    const btn = document.getElementById('btn-auto-hide');
+    if (!btn) return;
+    btn.classList.toggle('btn-active', enabled);
+    btn.setAttribute('data-tooltip', `Auto-hide: ${enabled ? '🔵 ON' : '⚪ OFF'} (F12)`);
   }
 
-  function expandSidebar() {
-    isSidebarOpen = true;
-    sidebar.classList.remove('hidden');
-    miniTab.classList.remove('visible');
-    sidebarWrap.style.width = '48px';
-    window.api.setSidebarState(true);
+  document.getElementById('btn-auto-hide').addEventListener('click', () => {
+    window.api.toggleAutoHide();
+  });
+
+  if (window.api.getAutoHideState) {
+    window.api.getAutoHideState().then(updateAutoHideUI);
   }
-
-  document.getElementById('btn-collapse').addEventListener('click', collapseSidebar);
-  miniTab.addEventListener('click', expandSidebar);
-
-  /* F12 toggle from main process */
-  if (window.api.onToggleSidebar) {
-    window.api.onToggleSidebar(() => {
-      if (isSidebarOpen) collapseSidebar(); else expandSidebar();
-    });
+  if (window.api.onAutoHideStatusChanged) {
+    window.api.onAutoHideStatusChanged(updateAutoHideUI);
   }
 
   /* ─────────────────────────────────────────
@@ -427,13 +422,13 @@
       F1: '3', F2: '4', F3: '187', F4: 'rotate', F5: 'password',
       F6: 'screen-off', F7: '26', F8: '25', F9: '24',
       F10: 'audio-toggle', F11: 'show-mirror',
-      F12: 'toggle-sidebar'
+      F12: 'toggle-auto-hide'
     };
     const action = map[e.key];
     if (!action) return;
     e.preventDefault();
-    if (action === 'toggle-sidebar') {
-      if (isSidebarOpen) collapseSidebar(); else expandSidebar();
+    if (action === 'toggle-auto-hide') {
+      window.api.toggleAutoHide();
     } else {
       triggerAction(action);
     }

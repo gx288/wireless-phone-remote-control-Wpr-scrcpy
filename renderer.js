@@ -26,6 +26,7 @@ const optStayAwake = document.getElementById('opt-stay-awake');
 const optAudioForward = document.getElementById('opt-audio-forward');
 const optShowTouches = document.getElementById('opt-show-touches');
 const optRecord = document.getElementById('opt-record');
+const optAutoHideOnLeave = document.getElementById('opt-auto-hide-on-leave');
 const deviceSavedPassword = document.getElementById('device-saved-password');
 
 // Tab 2: QR Wireless Debugging Elements
@@ -1242,6 +1243,14 @@ async function executeShellCommand(command) {
         if (settings.audioForward !== undefined) optAudioForward.checked = settings.audioForward;
         if (settings.showTouches !== undefined) optShowTouches.checked = settings.showTouches;
         if (settings.record !== undefined) optRecord.checked = settings.record;
+        if (settings.autoHideOnLeave !== undefined) {
+          optAutoHideOnLeave.checked = settings.autoHideOnLeave;
+        } else {
+          optAutoHideOnLeave.checked = false;
+        }
+        if (window.api && window.api.setAutoHideState) {
+          window.api.setAutoHideState(optAutoHideOnLeave.checked);
+        }
         
         const optTurnScreenOff = document.getElementById('opt-turn-screen-off');
         if (optTurnScreenOff && settings.turnScreenOff !== undefined) {
@@ -1265,6 +1274,10 @@ async function executeShellCommand(command) {
       optAudioForward.checked = false; // default to disabled as requested
       optShowTouches.checked = false;
       optRecord.checked = false;
+      optAutoHideOnLeave.checked = false;
+      if (window.api && window.api.setAutoHideState) {
+        window.api.setAutoHideState(false);
+      }
       const optTurnScreenOff = document.getElementById('opt-turn-screen-off');
       if (optTurnScreenOff) optTurnScreenOff.checked = false;
       
@@ -1296,6 +1309,7 @@ async function executeShellCommand(command) {
       audioForward: optAudioForward.checked,
       showTouches: optShowTouches.checked,
       record: optRecord.checked,
+      autoHideOnLeave: optAutoHideOnLeave ? optAutoHideOnLeave.checked : false,
       turnScreenOff: optTurnScreenOff ? optTurnScreenOff.checked : false,
       autoAudioShare: optAutoAudio ? optAutoAudio.checked : false
     };
@@ -1319,7 +1333,7 @@ async function executeShellCommand(command) {
   setTimeout(() => {
     const optTurnScreenOff = document.getElementById('opt-turn-screen-off');
     const optAutoAudio = document.getElementById('opt-auto-audio-share');
-    [scrcpyResolution, scrcpyBitrate, scrcpyFps, optAlwaysOnTop, optStayAwake, optAudioForward, optShowTouches, optRecord, optTurnScreenOff, optAutoAudio].forEach(input => {
+    [scrcpyResolution, scrcpyBitrate, scrcpyFps, optAlwaysOnTop, optStayAwake, optAudioForward, optShowTouches, optRecord, optTurnScreenOff, optAutoAudio, optAutoHideOnLeave].forEach(input => {
       if (input) {
         input.addEventListener('change', () => {
           if (selectedDeviceId) {

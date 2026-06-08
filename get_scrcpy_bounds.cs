@@ -23,6 +23,17 @@ class Program {
     [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
     public static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
 
+    [DllImport("user32.dll")]
+    public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+    [DllImport("user32.dll")]
+    public static extern bool GetCursorPos(out POINT lpPoint);
+
+    public struct POINT {
+        public int X;
+        public int Y;
+    }
+
     public struct RECT {
         public int Left;
         public int Top;
@@ -35,22 +46,18 @@ class Program {
     const uint SWP_NOSIZE = 0x0001;
     const uint SWP_NOMOVE = 0x0002;
     const uint SWP_NOACTIVATE = 0x0010;
+    const int SW_HIDE = 0;
+    const int SW_SHOW = 5;
+    const int SW_RESTORE = 9;
 
     static void Main(string[] args) {
         // Find overlay window.
         IntPtr overlayHwnd = FindWindowByTitle("AeroScrcpyOverlayWindow");
 
-        // Handle Pin/Unpin/Set-Pos if requested via arguments
+        // Handle Pin/Unpin/Set-Pos/Hide/Show if requested via arguments
         if (args.Length > 0) {
             // Find scrcpy window for one-shot commands
-            Process[] procsOne = Process.GetProcessesByName("scrcpy");
-            IntPtr scrcpyHwndOne = IntPtr.Zero;
-            foreach (var p in procsOne) {
-                if (p.MainWindowHandle != IntPtr.Zero) {
-                    scrcpyHwndOne = p.MainWindowHandle;
-                    break;
-                }
-            }
+            IntPtr scrcpyHwndOne = FindWindowByTitle("DeviceMirrorSession");
             if (scrcpyHwndOne == IntPtr.Zero) {
                 Environment.Exit(1);
             }
@@ -69,6 +76,16 @@ class Program {
                 if (y < 0) y = 0; // Force title bar to remain on screen
                 SetWindowPos(scrcpyHwndOne, IntPtr.Zero, x, y, 0, 0, SWP_NOSIZE | SWP_NOACTIVATE);
                 Console.WriteLine("Positioned to " + x + ", " + y);
+                return;
+            } else if (args[0] == "--hide") {
+                ShowWindow(scrcpyHwndOne, SW_HIDE);
+                Console.WriteLine("Hidden");
+                return;
+            } else if (args[0] == "--show") {
+                ShowWindow(scrcpyHwndOne, SW_SHOW);
+                ShowWindow(scrcpyHwndOne, SW_RESTORE);
+                SetWindowPos(scrcpyHwndOne, IntPtr.Zero, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+                Console.WriteLine("Shown");
                 return;
             }
         }
@@ -95,7 +112,14 @@ class Program {
                     if (IsIconic(scrcpyHwnd)) {
                         isFg = 0;
                     }
-                    Console.WriteLine("{0} {1} {2} {3} {4}", rect.Left, rect.Top, rect.Right, rect.Bottom, isFg);
+                    int isMouseOver = 0;
+                    POINT pt;
+                    if (GetCursorPos(out pt)) {
+                        if (pt.X >= rect.Left && pt.X <= rect.Right && pt.Y >= rect.Top && pt.Y <= rect.Bottom) {
+                            isMouseOver = 1;
+                        }
+                    }
+                    Console.WriteLine("{0} {1} {2} {3} {4} {5}", rect.Left, rect.Top, rect.Right, rect.Bottom, isFg, isMouseOver);
                 } else {
                     Console.WriteLine("NOT_FOUND");
                 }

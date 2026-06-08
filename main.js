@@ -19,6 +19,10 @@ let isMirrorPinned = false;
 let pendingWindowX = null;
 let pendingWindowY = null;
 let wereFKeysRegistered = false;
+let isAutoHideEnabled = false;
+let hasMouseEntered = false;
+let isMirrorHidden = false;
+let lastKnownScrcpyBounds = null;
 
 function runBackgroundCleanUp() {
   if (isQuitting) return;
@@ -153,12 +157,44 @@ function createOverlayWindow() {
 
 let boundsProc = null;
 
+function hideMirror() {
+  if (!isMirrorActive || isMirrorHidden) return;
+  isMirrorHidden = true;
+  hasMouseEntered = false;
+  exec(`"${BOUNDS_EXE}" --hide`, { windowsHide: true });
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    overlayWindow.hide();
+  }
+}
+
+function showMirrorWindow() {
+  if (!isMirrorActive) return;
+  isMirrorHidden = false;
+  hasMouseEntered = false;
+  exec(`"${BOUNDS_EXE}" --show`, { windowsHide: true });
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    overlayWindow.show();
+  }
+}
+
 function startScrcpyTracking() {
   if (boundsProc) {
     try { boundsProc.kill(); } catch (_) {}
   }
   notFoundCount = 0;
   wereFKeysRegistered = false;
+  isMirrorHidden = false;
+  hasMouseEntered = false;
+  lastKnownScrcpyBounds = null;
+
+  // Register F12 immediately for the active mirror session
+  try {
+    if (!globalShortcut.isRegistered('F12')) {
+      globalShortcut.register('F12', () => {
+        toggleAutoHideMode();
+      });
+    }
+  } catch (e) {}
 
   // Start the helper as a single long-running background process directly without shell wrapper to allow clean termination
   boundsProc = spawn(BOUNDS_EXE, [], { windowsHide: true });
@@ -174,32 +210,87 @@ function startScrcpyTracking() {
       if (!trimmed) continue;
 
       if (trimmed === 'NOT_FOUND') {
-        notFoundCount++;
-        if (notFoundCount >= 20) {
-          if (overlayWindow && !overlayWindow.isDestroyed() && overlayWindow.isVisible()) {
-            overlayWindow.hide();
+        if (isMirrorHidden) {
+          // If we intentionally hid the mirror, do not treat NOT_FOUND as error/cleanup
+          notFoundCount = 0;
+          
+          // Still track mouse movement relative to last known bounds
+          if (isAutoHideEnabled && lastKnownScrcpyBounds) {
+            const mouse = screen.getCursorScreenPoint();
+            const isMouseOver = (mouse.x >= lastKnownScrcpyBounds.x &&
+                                 mouse.x <= lastKnownScrcpyBounds.x + lastKnownScrcpyBounds.width &&
+                                 mouse.y >= lastKnownScrcpyBounds.y &&
+                                 mouse.y <= lastKnownScrcpyBounds.y + lastKnownScrcpyBounds.height);
+            if (isMouseOver) {
+              showMirrorWindow();
+              hasMouseEntered = true;
+            }
           }
-          if (isMirrorActive) {
-            isMirrorActive = false;
-            // Force-kill any background scrcpy process that hung or closed its window
-            exec('taskkill /F /IM scrcpy.exe', { windowsHide: true });
+        } else {
+          notFoundCount++;
+          if (notFoundCount >= 20) {
+            if (overlayWindow && !overlayWindow.isDestroyed() && overlayWindow.isVisible()) {
+              overlayWindow.hide();
+            }
+            if (isMirrorActive) {
+              isMirrorActive = false;
+              // Force-kill any background scrcpy process that hung or closed its window
+              exec('taskkill /F /IM scrcpy.exe', { windowsHide: true });
+            }
+            lastOverlayBounds = null;
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('mirror-status-changed', false);
+            }
+            if (wereFKeysRegistered) {
+              const keys = ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'F10', 'F11'];
+              keys.forEach(k => {
+                try { globalShortcut.unregister(k); } catch (_) {}
+              });
+              wereFKeysRegistered = false;
+            }
+            stopScrcpyTracking();
           }
-          lastOverlayBounds = null;
-          if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.webContents.send('mirror-status-changed', false);
-          }
-          if (wereFKeysRegistered) {
-            globalShortcut.unregisterAll();
-            wereFKeysRegistered = false;
-          }
-          stopScrcpyTracking();
         }
       } else {
         const parts = trimmed.split(/\s+/).map(Number);
-        if (parts.length === 5 && parts.slice(0, 4).every(isFinite)) {
-          const [L, T, R, B, isFg] = parts;
+        if (parts.length >= 5 && parts.slice(0, 4).every(isFinite)) {
+          const [L, T, R, B, isFg, isMouseOverUnused] = parts;
+          
           if (L > -10000 && T > -10000 && R > L && B > T) {
             notFoundCount = 0;
+            const W = R - L;
+            const H = B - T;
+
+            if (W > 50 && H > 50) {
+              const sideW = isSidebarExpanded ? SIDEBAR_EXPANDED : SIDEBAR_COLLAPSED;
+              const totalW = W + sideW;
+              lastKnownScrcpyBounds = { x: L, y: T, width: totalW, height: H };
+
+              // Auto-hide and Wake check using precise screen coords
+              if (isAutoHideEnabled && isMirrorActive) {
+                const mouse = screen.getCursorScreenPoint();
+                const isMouseOver = (mouse.x >= L && mouse.x <= L + totalW && mouse.y >= T && mouse.y <= B);
+                
+                if (isMirrorHidden) {
+                  if (isMouseOver) {
+                    showMirrorWindow();
+                    hasMouseEntered = true;
+                  }
+                } else {
+                  if (isMouseOver) {
+                    hasMouseEntered = true;
+                  } else if (hasMouseEntered) {
+                    hideMirror();
+                    return; // Skip layout updates since we just hid it
+                  }
+                }
+              }
+            }
+
+            if (isMirrorHidden) {
+              // Skip updating bounds and showing overlay if hidden
+              return;
+            }
 
             // Apply pending startup window position to eliminate SDL aspect ratio drift
             if (pendingWindowX !== null && pendingWindowY !== null) {
@@ -244,7 +335,11 @@ function startScrcpyTracking() {
               }
             } else {
               if (wereFKeysRegistered) {
-                globalShortcut.unregisterAll();
+                // Unregister only F1-F11, keeping F12!
+                const keys = ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'F10', 'F11'];
+                keys.forEach(k => {
+                  try { globalShortcut.unregister(k); } catch (_) {}
+                });
                 wereFKeysRegistered = false;
               }
             }
@@ -274,11 +369,20 @@ function stopScrcpyTracking() {
   }
   lastOverlayBounds = null;
   notFoundCount = 0;
+  isMirrorHidden = false;
+  hasMouseEntered = false;
+  lastKnownScrcpyBounds = null;
   if (overlayWindow && !overlayWindow.isDestroyed()) {
     try { overlayWindow.hide(); } catch (_) {}
   }
+  try {
+    globalShortcut.unregister('F12');
+  } catch (_) {}
   if (wereFKeysRegistered) {
-    try { globalShortcut.unregisterAll(); } catch (_) {}
+    const keys = ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'F10', 'F11'];
+    keys.forEach(k => {
+      try { globalShortcut.unregister(k); } catch (_) {}
+    });
     wereFKeysRegistered = false;
   }
 }
@@ -307,16 +411,6 @@ function registerFKeys() {
     }
   }
 
-  // F12 register check
-  try {
-    if (!globalShortcut.isRegistered('F12')) {
-      globalShortcut.register('F12', () => {
-        if (overlayWindow && !overlayWindow.isDestroyed()) {
-          overlayWindow.webContents.send('toggle-sidebar');
-        }
-      });
-    }
-  } catch (e) {}
 
   // Alt+Shift+S: show/hide entire overlay
   try {
@@ -512,6 +606,42 @@ ipcMain.handle('set-sidebar-state', (event, expanded) => {
   return { success: true };
 });
 
+function toggleAutoHideMode() {
+  isAutoHideEnabled = !isAutoHideEnabled;
+  hasMouseEntered = false;
+  if (!isAutoHideEnabled && isMirrorActive) {
+    showMirrorWindow();
+  }
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('auto-hide-status-changed', isAutoHideEnabled);
+  }
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    overlayWindow.webContents.send('auto-hide-status-changed', isAutoHideEnabled);
+  }
+}
+
+ipcMain.handle('set-auto-hide-state', (event, enabled) => {
+  isAutoHideEnabled = enabled;
+  hasMouseEntered = false;
+  if (!enabled && isMirrorActive) {
+    showMirrorWindow();
+  }
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('auto-hide-status-changed', isAutoHideEnabled);
+  }
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    overlayWindow.webContents.send('auto-hide-status-changed', isAutoHideEnabled);
+  }
+  return { success: true };
+});
+
+ipcMain.handle('toggle-auto-hide', () => {
+  toggleAutoHideMode();
+  return { success: true };
+});
+
+ipcMain.handle('get-auto-hide-state', () => isAutoHideEnabled);
+
 // ─── IPC: Toggle overlay visibility ──────────────────────────────────────────
 ipcMain.handle('toggle-controller-window', (event, show) => {
   if (!overlayWindow) return { success: false };
@@ -539,8 +669,16 @@ ipcMain.handle('set-mirror-always-on-top', (event, pinned) => {
 
 // ─── IPC: Wake / Show scrcpy mirror window ───────────────────────────────────
 ipcMain.handle('show-mirror', () => {
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('trigger-relaunch-mirror');
+  if (isMirrorActive) {
+    exec(`"${BOUNDS_EXE}" --show`, { windowsHide: true });
+    hasMouseEntered = false;
+    if (overlayWindow && !overlayWindow.isDestroyed()) {
+      overlayWindow.show();
+    }
+  } else {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('trigger-relaunch-mirror');
+    }
   }
   return { success: true };
 });

@@ -30,6 +30,11 @@ contextBridge.exposeInMainWorld('api', {
   // ── Sidebar collapse state ────────────────────────────────────────────────
   setSidebarState:     (expanded)       => ipcRenderer.invoke('set-sidebar-state', expanded),
 
+  // Auto-hide mirror on mouse leave
+  setAutoHideState:    (enabled)        => ipcRenderer.invoke('set-auto-hide-state', enabled),
+  toggleAutoHide:      ()               => ipcRenderer.invoke('toggle-auto-hide'),
+  getAutoHideState:    ()               => ipcRenderer.invoke('get-auto-hide-state'),
+
   // ── Mirror always-on-top (Win32 SetWindowPos) ─────────────────────────────
   setMirrorAlwaysOnTop: (pinned)        => ipcRenderer.invoke('set-mirror-always-on-top', pinned),
 
@@ -86,6 +91,11 @@ contextBridge.exposeInMainWorld('api', {
     const listener = (_, bounds) => callback(bounds);
     ipcRenderer.on('scrcpy-bounds-updated', listener);
     return () => ipcRenderer.removeListener('scrcpy-bounds-updated', listener);
+  },
+  onAutoHideStatusChanged: (callback) => {
+    const listener = (_, enabled) => callback(enabled);
+    ipcRenderer.on('auto-hide-status-changed', listener);
+    return () => ipcRenderer.removeListener('auto-hide-status-changed', listener);
   },
   getAppVersion: () => ipcRenderer.invoke('get-app-version')
 });
