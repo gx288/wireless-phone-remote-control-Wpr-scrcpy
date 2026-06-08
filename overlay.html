@@ -31,28 +31,27 @@
       pointer-events: all;
     }
 
-    /* Expanded sidebar - Premium Dark Glassmorphism */
+    /* Expanded sidebar container */
     #sidebar {
       width: 100%;
       height: 100%;
-      background: #2b2b2b;
-      border: 1px solid #1a1a1a;
+      background: transparent;
       display: flex;
       align-items: center;
       justify-content: center;
       overflow: hidden;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
       z-index: 5;
     }
 
-    /* Scroll area for buttons */
+    /* Scroll area for buttons - styled as a floating rounded dock */
     .btn-list {
       display: flex;
       align-items: center;
       gap: 3px;
-      width: 100%;
-      height: 100%;
-      flex: 1;
+      background: #2b2b2b;
+      border: 1px solid #1c1c1c;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
       overflow: auto;
       scrollbar-width: none;
       padding: 6px;
@@ -173,7 +172,7 @@
 
     /* ── DOCK EDGE SPECIFIC STYLES ── */
 
-    /* Right Dock */
+     /* Right Dock */
     body.dock-right {
       flex-direction: row;
     }
@@ -183,12 +182,13 @@
     body.dock-right #sidebar {
       width: 100%; height: 100%;
       flex-direction: column;
-      border-radius: 0;
-      border-left: none;
-      padding: 8px 0 6px;
+      padding: 6px 0;
     }
     body.dock-right .btn-list {
       flex-direction: column;
+      height: auto;
+      max-height: calc(100% - 12px);
+      width: calc(100% - 4px);
     }
     body.dock-right .divider {
       width: 30px; height: 1px;
@@ -210,12 +210,13 @@
     body.dock-left #sidebar {
       width: 100%; height: 100%;
       flex-direction: column;
-      border-radius: 0;
-      border-right: none;
-      padding: 8px 0 6px;
+      padding: 6px 0;
     }
     body.dock-left .btn-list {
       flex-direction: column;
+      height: auto;
+      max-height: calc(100% - 12px);
+      width: calc(100% - 4px);
     }
     body.dock-left .divider {
       width: 30px; height: 1px;
@@ -237,9 +238,7 @@
     body.dock-top #sidebar {
       width: 100%; height: 100%;
       flex-direction: row;
-      border-radius: 0;
-      border-bottom: none;
-      padding: 4px 8px;
+      padding: 0 6px;
     }
     body.dock-top .btn-list {
       display: grid;
@@ -247,6 +246,9 @@
       gap: 2px 3px;
       padding: 4px;
       overflow: hidden;
+      width: auto;
+      height: auto;
+      max-width: calc(100% - 12px);
     }
     body.dock-top .divider {
       display: none;
@@ -271,9 +273,7 @@
     body.dock-bottom #sidebar {
       width: 100%; height: 100%;
       flex-direction: row;
-      border-radius: 0;
-      border-top: none;
-      padding: 4px 8px;
+      padding: 0 6px;
     }
     body.dock-bottom .btn-list {
       display: grid;
@@ -281,6 +281,9 @@
       gap: 2px 3px;
       padding: 4px;
       overflow: hidden;
+      width: auto;
+      height: auto;
+      max-width: calc(100% - 12px);
     }
     body.dock-bottom .divider {
       display: none;
