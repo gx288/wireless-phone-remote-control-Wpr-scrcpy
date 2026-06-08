@@ -1,11 +1,11 @@
 {
   "name": "wpr-scrcpy",
-  "version": "4.0.3",
+  "version": "4.0.4",
   "description": "WprScrcpy GUI and ADB Controller with Wi-Fi Debugging QR Code and Terminal",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": "npx electron-packager . WprScrcpy --platform=win32 --arch=x64 --icon=smartphone.ico --overwrite --out=dist --app-version=4.0.3 --ignore=\"(\\.git|dist|scratch|get_scrcpy_bounds\\.cs|get_scrcpy_bounds\\.ps1|create_shortcut\\.ps1|Chay_AeroScrcpy\\.bat|\\.zip|\\.rar)\" && powershell -NoProfile -Command \"if (Test-Path dist/WprScrcpy-v4) { Remove-Item -Recurse -Force dist/WprScrcpy-v4 }; Rename-Item -Path dist/WprScrcpy-win32-x64 -NewName WprScrcpy-v4; if (Test-Path dist/WprScrcpy-v4.0.3.zip) { Remove-Item -Force dist/WprScrcpy-v4.0.3.zip }; Compress-Archive -Path dist/WprScrcpy-v4 -DestinationPath dist/WprScrcpy-v4.0.3.zip\""
+    "build": "npx electron-packager . WprScrcpy --platform=win32 --arch=x64 --icon=smartphone.ico --overwrite --out=dist --app-version=4.0.4 --ignore=\"(\\.git|dist|scratch|get_scrcpy_bounds\\.cs|get_scrcpy_bounds\\.ps1|create_shortcut\\.ps1|Chay_AeroScrcpy\\.bat|\\.zip|\\.rar)\" && powershell -NoProfile -Command \"if (Test-Path dist/WprScrcpy-v4) { Remove-Item -Recurse -Force dist/WprScrcpy-v4 }; Rename-Item -Path dist/WprScrcpy-win32-x64 -NewName WprScrcpy-v4; if (Test-Path dist/WprScrcpy-v4.0.4.zip) { Remove-Item -Force dist/WprScrcpy-v4.0.4.zip }; Compress-Archive -Path dist/WprScrcpy-v4 -DestinationPath dist/WprScrcpy-v4.0.4.zip\""
   },
   "build": {
     "appId": "com.antigravity.wprscrcpy",

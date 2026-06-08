@@ -4,6 +4,10 @@
   <meta charset="UTF-8">
   <title>WprScrcpy Overlay</title>
   <style>
+    :root {
+      --scale: 1.0;
+    }
+
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     html, body {
@@ -47,31 +51,31 @@
     .btn-list {
       display: flex;
       align-items: center;
-      gap: 3px;
+      gap: calc(3px * var(--scale));
       background: #2b2b2b;
       border: 1px solid #1c1c1c;
-      border-radius: 12px;
+      border-radius: calc(12px * var(--scale));
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
       overflow: auto;
       scrollbar-width: none;
-      padding: 6px;
+      padding: calc(6px * var(--scale));
     }
     .btn-list::-webkit-scrollbar { display: none; }
 
     /* Control button: dark boxed classic style */
     .ctrl-btn {
-      width: 44px;
-      height: 38px;
+      width: calc(44px * var(--scale));
+      height: calc(38px * var(--scale));
       background: #3a3a3a;
-      border: 1px solid #1c1c1c;
-      border-radius: 6px;
+      border: calc(1px * var(--scale)) solid #1c1c1c;
+      border-radius: calc(6px * var(--scale));
       cursor: pointer;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       color: #dddddd;
-      font-size: 16px;
+      font-size: calc(16px * var(--scale));
       position: relative;
       transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease, transform 0.08s ease;
       padding: 0;
@@ -94,9 +98,9 @@
     }
 
     .ctrl-btn svg {
-      width: 18px;
-      height: 18px;
-      margin-bottom: 2px;
+      width: calc(18px * var(--scale));
+      height: calc(18px * var(--scale));
+      margin-bottom: calc(2px * var(--scale));
       stroke: currentColor;
       stroke-width: 2.2;
       fill: none;
@@ -106,12 +110,12 @@
     }
 
     .f-key {
-      font-size: 8px;
+      font-size: calc(8px * var(--scale));
       font-weight: 700;
       color: #888888;
-      letter-spacing: 0.3px;
+      letter-spacing: calc(0.3px * var(--scale));
       line-height: 1;
-      margin-top: 1px;
+      margin-top: calc(1px * var(--scale));
       font-family: 'Consolas', 'Courier New', monospace;
     }
 
@@ -191,10 +195,11 @@
       width: calc(100% - 4px);
     }
     body.dock-right .divider {
-      width: 30px; height: 1px;
+      width: calc(30px * var(--scale));
+      height: calc(1px * var(--scale));
       background: rgba(255, 255, 255, 0.08);
       flex-shrink: 0;
-      margin: 4px 0;
+      margin: calc(4px * var(--scale)) 0;
     }
     body.dock-right .ctrl-btn::after {
       right: 58px; top: auto; left: auto; transform: none;
@@ -219,10 +224,11 @@
       width: calc(100% - 4px);
     }
     body.dock-left .divider {
-      width: 30px; height: 1px;
+      width: calc(30px * var(--scale));
+      height: calc(1px * var(--scale));
       background: rgba(255, 255, 255, 0.08);
       flex-shrink: 0;
-      margin: 4px 0;
+      margin: calc(4px * var(--scale)) 0;
     }
     body.dock-left .ctrl-btn::after {
       left: 58px; right: auto; top: auto; transform: none;
@@ -371,6 +377,25 @@
     window.api.setIgnoreMouseEvents(true, { forward: true });
   });
 
+  /* Dynamic scaling based on mirror window size */
+  function adjustScale() {
+    let scale = 1.0;
+    if (dockEdge === 'left' || dockEdge === 'right') {
+      // Base height 760px
+      scale = window.innerHeight / 760;
+      // Constrain scale between 0.80 and 1.10
+      scale = Math.max(0.80, Math.min(scale, 1.10));
+    } else {
+      // Base width 380px
+      scale = window.innerWidth / 380;
+      // Constrain scale between 0.82 and 1.05 (prevent too tiny on short edge)
+      scale = Math.max(0.82, Math.min(scale, 1.05));
+    }
+    document.documentElement.style.setProperty('--scale', scale.toFixed(3));
+  }
+
+  window.addEventListener('resize', adjustScale);
+
   // Set passthrough on load
   window.addEventListener('load', () => {
     window.api.setIgnoreMouseEvents(true, { forward: true });
@@ -380,6 +405,7 @@
       window.api.setDockEdge(dockEdge);
     }
     updateDockUI(dockEdge);
+    adjustScale();
   });
 
   /* ─────────────────────────────────────────
@@ -391,6 +417,7 @@
     if (btn) {
       btn.setAttribute('data-tooltip', `Dock Edge: ${edge.toUpperCase()} (🧭)`);
     }
+    adjustScale();
   }
 
   document.getElementById('btn-dock-cycle').addEventListener('click', () => {
