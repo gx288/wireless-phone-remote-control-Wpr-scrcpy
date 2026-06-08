@@ -243,8 +243,8 @@
     body.dock-top .btn-list {
       display: grid;
       grid-template-columns: repeat(8, 1fr);
-      gap: 2px 3px;
-      padding: 4px;
+      gap: 4px 3px;
+      padding: 6px;
       overflow: hidden;
       width: auto;
       height: auto;
@@ -255,12 +255,12 @@
     }
     body.dock-top .ctrl-btn {
       width: 100%;
-      height: 30px;
+      height: 38px;
       max-width: 44px;
       justify-self: center;
     }
     body.dock-top .ctrl-btn::after {
-      top: 80px; bottom: auto; left: 50%; right: auto; transform: translateX(-50%);
+      top: 100px; bottom: auto; left: 50%; right: auto; transform: translateX(-50%);
     }
 
     /* Bottom Dock */
@@ -278,8 +278,8 @@
     body.dock-bottom .btn-list {
       display: grid;
       grid-template-columns: repeat(8, 1fr);
-      gap: 2px 3px;
-      padding: 4px;
+      gap: 4px 3px;
+      padding: 6px;
       overflow: hidden;
       width: auto;
       height: auto;
@@ -290,25 +290,12 @@
     }
     body.dock-bottom .ctrl-btn {
       width: 100%;
-      height: 30px;
+      height: 38px;
       max-width: 44px;
       justify-self: center;
     }
     body.dock-bottom .ctrl-btn::after {
-      bottom: 80px; top: auto; left: 50%; right: auto; transform: translateX(-50%);
-    }
-
-    body.dock-top .ctrl-btn svg,
-    body.dock-bottom .ctrl-btn svg {
-      width: 14px;
-      height: 14px;
-      stroke-width: 2.5;
-      margin-bottom: 0px;
-    }
-    body.dock-top .f-key,
-    body.dock-bottom .f-key {
-      font-size: 7px;
-      margin-top: 0px;
+      bottom: 100px; top: auto; left: 50%; right: auto; transform: translateX(-50%);
     }
   </style>
 </head>

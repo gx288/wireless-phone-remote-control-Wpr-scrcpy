@@ -277,7 +277,7 @@ function startScrcpyTracking() {
             const W = R - L;
             const H = B - T;
 
-            const sideSize = (dockEdge === 'top' || dockEdge === 'bottom') ? 76 : 48;
+            const sideSize = (dockEdge === 'top' || dockEdge === 'bottom') ? 98 : 48;
             let ob;
             if (dockEdge === 'right') {
               ob = { x: L + W - 8, y: T, width: sideSize, height: H };
