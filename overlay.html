@@ -16,190 +16,145 @@
 
     body {
       display: flex;
-      flex-direction: row;
     }
 
-    /* ── Mirror zone: transparent, click-through ── */
+    /* ── Mirror zone: hidden ── */
     #mirror-zone {
-      flex: 1;
-      background: transparent;
-      pointer-events: none;
+      display: none;
     }
 
-    /* ── Sidebar wrapper (always 48px in DOM) ── */
+    /* ── Sidebar wrapper ── */
     #sidebar-wrap {
-      width: 48px;
+      width: 100%;
       height: 100%;
       position: relative;
-      flex-shrink: 0;
       pointer-events: all;
     }
 
-    /* Collapsed mini-tab */
-    #mini-tab {
-      position: absolute;
-      top: 50%; left: 0;
-      transform: translateY(-50%);
-      width: 16px;
-      height: 60px;
-      background: rgba(248, 250, 252, 0.95);
-      border: 1px solid rgba(203, 213, 225, 0.8);
-      border-left: none;
-      border-radius: 0 8px 8px 0;
+    /* Expanded sidebar - Premium Dark Glassmorphism */
+    #sidebar {
+      width: 100%;
+      height: 100%;
+      background: #2b2b2b;
+      border: 1px solid #1a1a1a;
       display: flex;
       align-items: center;
       justify-content: center;
-      cursor: pointer;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.18s ease, background 0.1s ease;
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-      z-index: 10;
-      box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
-    }
-    #mini-tab:hover {
-      background: rgba(226, 232, 240, 0.95);
-    }
-    #mini-tab.visible {
-      opacity: 1;
-      pointer-events: all;
-    }
-    #mini-tab-arrow {
-      font-size: 8px;
-      color: #64748b;
-      writing-mode: vertical-rl;
-      letter-spacing: 1px;
-    }
-
-    /* Expanded sidebar */
-    #sidebar {
-      position: absolute;
-      top: 0; left: 0;
-      width: 48px; height: 100%;
-      background: rgba(248, 250, 252, 0.95);
-      border-right: 1px solid rgba(203, 213, 225, 0.8);
-      border-radius: 0 10px 10px 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 8px 0 6px;
-      gap: 2px;
       overflow: hidden;
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-      box-shadow: 2px 0 20px rgba(0,0,0,0.08);
-      transition: opacity 0.18s ease, transform 0.18s ease;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
       z-index: 5;
-    }
-    #sidebar.hidden {
-      opacity: 0;
-      pointer-events: none;
-      transform: translateX(-4px);
     }
 
     /* Scroll area for buttons */
     .btn-list {
       display: flex;
-      flex-direction: column;
       align-items: center;
-      gap: 1px;
+      gap: 3px;
       width: 100%;
+      height: 100%;
       flex: 1;
-      overflow-y: auto;
-      overflow-x: hidden;
+      overflow: auto;
       scrollbar-width: none;
-      padding: 0 5px;
+      padding: 6px;
     }
     .btn-list::-webkit-scrollbar { display: none; }
 
-    /* Control button */
+    /* Control button: dark boxed classic style */
     .ctrl-btn {
       width: 44px;
-      height: 40px;
-      background: transparent;
-      border: none;
+      height: 38px;
+      background: #3a3a3a;
+      border: 1px solid #1c1c1c;
       border-radius: 6px;
       cursor: pointer;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      color: #334155;
-      font-size: 20px;
+      color: #dddddd;
+      font-size: 16px;
       position: relative;
-      transition: background 0.10s ease, color 0.10s ease, transform 0.08s ease;
+      transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease, transform 0.08s ease;
       padding: 0;
       line-height: 1;
       flex-shrink: 0;
       outline: none;
+      filter: grayscale(100%) brightness(1.2);
+      opacity: 0.9;
     }
     .ctrl-btn:hover {
-      background: rgba(15, 23, 42, 0.06);
-      color: #0f172a;
+      background: #484848;
+      border-color: #121212;
+      color: #ffffff;
+      filter: none;
+      opacity: 1;
     }
     .ctrl-btn:active {
-      background: rgba(15, 23, 42, 0.12);
-      transform: scale(0.90);
+      background: #202020;
+      transform: scale(0.93);
+    }
+
+    .ctrl-btn svg {
+      width: 18px;
+      height: 18px;
+      margin-bottom: 2px;
+      stroke: currentColor;
+      stroke-width: 2.2;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex-shrink: 0;
     }
 
     .f-key {
       font-size: 8px;
       font-weight: 700;
-      color: #64748b;
+      color: #888888;
       letter-spacing: 0.3px;
       line-height: 1;
       margin-top: 1px;
       font-family: 'Consolas', 'Courier New', monospace;
     }
 
-    /* State classes */
+    /* State classes - Glow and colored backgrounds */
     .ctrl-btn.btn-active {
-      background: rgba(2, 132, 199, 0.12);
-      color: #0284c7;
+      background: #2563eb;
+      border-color: #1a1a1a;
+      color: #ffffff;
+      filter: none;
+      opacity: 1;
     }
     .ctrl-btn.screen-off-active {
-      background: rgba(217, 119, 6, 0.12);
-      color: #d97706;
+      background: #d97706;
+      border-color: #1a1a1a;
+      color: #ffffff;
+      filter: none;
+      opacity: 1;
     }
     .ctrl-btn.audio-active {
-      background: rgba(16, 185, 129, 0.12);
-      color: #059669;
+      background: #059669;
+      border-color: #1a1a1a;
+      color: #ffffff;
+      filter: none;
+      opacity: 1;
     }
     .ctrl-btn.recording {
-      color: #ef4444;
-      animation: pulse-rec 1.1s ease infinite;
+      background: #dc2626;
+      border-color: #1a1a1a;
+      color: #ffffff;
+      filter: none;
+      opacity: 1;
+      animation: pulse-rec-classic 1.2s ease infinite;
     }
-    @keyframes pulse-rec {
-      0%, 100% { background: rgba(239,68,68,0.06); }
-      50%       { background: rgba(239,68,68,0.15); }
-    }
-
-    /* Collapse button */
-    .ctrl-btn.btn-collapse {
-      color: #64748b;
-      font-size: 11px;
-    }
-    .ctrl-btn.btn-collapse:hover {
-      background: rgba(239, 68, 68, 0.08);
-      color: #ef4444;
+    @keyframes pulse-rec-classic {
+      0%, 100% { background: #dc2626; }
+      50%       { background: #b91c1c; }
     }
 
-    /* Divider */
-    .divider {
-      width: 38px;
-      height: 1px;
-      background: rgba(15, 23, 42, 0.08);
-      flex-shrink: 0;
-      margin: 2px 0;
-    }
-
-    /* Tooltip: appears to the LEFT of button */
+    /* Tooltip styling */
     .ctrl-btn::after {
       content: attr(data-tooltip);
       position: fixed;
-      top: auto;
-      right: 58px;
       background: #0f172a;
       border: 1px solid #1e293b;
       color: #f8fafc;
@@ -212,12 +167,149 @@
       opacity: 0;
       transition: opacity 0.10s ease;
       z-index: 9999;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
     }
     .ctrl-btn:hover::after { opacity: 1; }
+
+    /* ── DOCK EDGE SPECIFIC STYLES ── */
+
+    /* Right Dock */
+    body.dock-right {
+      flex-direction: row;
+    }
+    body.dock-right #sidebar-wrap {
+      width: 100%; height: 100%;
+    }
+    body.dock-right #sidebar {
+      width: 100%; height: 100%;
+      flex-direction: column;
+      border-radius: 0;
+      border-left: none;
+      padding: 8px 0 6px;
+    }
+    body.dock-right .btn-list {
+      flex-direction: column;
+    }
+    body.dock-right .divider {
+      width: 30px; height: 1px;
+      background: rgba(255, 255, 255, 0.08);
+      flex-shrink: 0;
+      margin: 4px 0;
+    }
+    body.dock-right .ctrl-btn::after {
+      right: 58px; top: auto; left: auto; transform: none;
+    }
+
+    /* Left Dock */
+    body.dock-left {
+      flex-direction: row-reverse;
+    }
+    body.dock-left #sidebar-wrap {
+      width: 100%; height: 100%;
+    }
+    body.dock-left #sidebar {
+      width: 100%; height: 100%;
+      flex-direction: column;
+      border-radius: 0;
+      border-right: none;
+      padding: 8px 0 6px;
+    }
+    body.dock-left .btn-list {
+      flex-direction: column;
+    }
+    body.dock-left .divider {
+      width: 30px; height: 1px;
+      background: rgba(255, 255, 255, 0.08);
+      flex-shrink: 0;
+      margin: 4px 0;
+    }
+    body.dock-left .ctrl-btn::after {
+      left: 58px; right: auto; top: auto; transform: none;
+    }
+
+    /* Top Dock */
+    body.dock-top {
+      flex-direction: column-reverse;
+    }
+    body.dock-top #sidebar-wrap {
+      width: 100%; height: 100%;
+    }
+    body.dock-top #sidebar {
+      width: 100%; height: 100%;
+      flex-direction: row;
+      border-radius: 0;
+      border-bottom: none;
+      padding: 4px 8px;
+    }
+    body.dock-top .btn-list {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 2px 3px;
+      padding: 4px;
+      overflow: hidden;
+    }
+    body.dock-top .divider {
+      display: none;
+    }
+    body.dock-top .ctrl-btn {
+      width: 100%;
+      height: 30px;
+      max-width: 44px;
+      justify-self: center;
+    }
+    body.dock-top .ctrl-btn::after {
+      top: 80px; bottom: auto; left: 50%; right: auto; transform: translateX(-50%);
+    }
+
+    /* Bottom Dock */
+    body.dock-bottom {
+      flex-direction: column;
+    }
+    body.dock-bottom #sidebar-wrap {
+      width: 100%; height: 100%;
+    }
+    body.dock-bottom #sidebar {
+      width: 100%; height: 100%;
+      flex-direction: row;
+      border-radius: 0;
+      border-top: none;
+      padding: 4px 8px;
+    }
+    body.dock-bottom .btn-list {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 2px 3px;
+      padding: 4px;
+      overflow: hidden;
+    }
+    body.dock-bottom .divider {
+      display: none;
+    }
+    body.dock-bottom .ctrl-btn {
+      width: 100%;
+      height: 30px;
+      max-width: 44px;
+      justify-self: center;
+    }
+    body.dock-bottom .ctrl-btn::after {
+      bottom: 80px; top: auto; left: 50%; right: auto; transform: translateX(-50%);
+    }
+
+    body.dock-top .ctrl-btn svg,
+    body.dock-bottom .ctrl-btn svg {
+      width: 14px;
+      height: 14px;
+      stroke-width: 2.5;
+      margin-bottom: 0px;
+    }
+    body.dock-top .f-key,
+    body.dock-bottom .f-key {
+      font-size: 7px;
+      margin-top: 0px;
+    }
   </style>
 </head>
-<body>
+<body class="dock-right">
 
 <!-- Transparent zone – mouse clicks pass through to scrcpy -->
 <div id="mirror-zone"></div>
@@ -225,46 +317,42 @@
 <!-- Sidebar wrapper -->
 <div id="sidebar-wrap">
 
-  <!-- Collapsed tab (shown when sidebar hidden) -->
-  <div id="mini-tab" title="Open panel (F12)">
-    <span id="mini-tab-arrow">▶ ▶</span>
-  </div>
-
   <!-- Expanded sidebar -->
   <div id="sidebar">
     <div class="btn-list" id="btn-list">
 
       <!-- Group 1: Navigation -->
-      <button class="ctrl-btn" data-key="3"   data-tooltip="Home screen (F1)">🏠<span class="f-key">F1</span></button>
-      <button class="ctrl-btn" data-key="4"   data-tooltip="Back button (F2)">⬅<span class="f-key">F2</span></button>
-      <button class="ctrl-btn" data-key="187" data-tooltip="Recent apps (F3)">▢<span class="f-key">F3</span></button>
+      <button class="ctrl-btn" data-key="3" data-tooltip="Home screen (F1)"><svg viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span class="f-key">F1</span></button>
+      <button class="ctrl-btn" data-key="4" data-tooltip="Back button (F2)"><svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg><span class="f-key">F2</span></button>
+      <button class="ctrl-btn" data-key="187" data-tooltip="Recent apps (F3)"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></svg><span class="f-key">F3</span></button>
 
       <div class="divider"></div>
 
       <!-- Group 2: Screen & Input -->
-      <button class="ctrl-btn" data-key="rotate"    data-tooltip="Rotate screen (F4)">🔄<span class="f-key">F4</span></button>
-      <button class="ctrl-btn" data-key="password"  data-tooltip="Input PIN/Password (F5)">🔑<span class="f-key">F5</span></button>
-      <button class="ctrl-btn" data-key="screen-off" id="btn-screen-off" data-tooltip="Turn off physical screen (F6)">🌙<span class="f-key">F6</span></button>
+      <button class="ctrl-btn" data-key="rotate" data-tooltip="Rotate screen (F4)"><svg viewBox="0 0 24 24"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg><span class="f-key">F4</span></button>
+      <button class="ctrl-btn" data-key="password" data-tooltip="Input PIN/Password (F5)"><svg viewBox="0 0 24 24"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 1.5 1.5M15.5 7.5 14 6"/></svg><span class="f-key">F5</span></button>
+      <button class="ctrl-btn" data-key="screen-off" id="btn-screen-off" data-tooltip="Turn off physical screen (F6)"><svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg><span class="f-key">F6</span></button>
 
       <div class="divider"></div>
 
       <!-- Group 3: Volume & Power -->
-      <button class="ctrl-btn" data-key="26" data-tooltip="Power button (F7)">🔌<span class="f-key">F7</span></button>
-      <button class="ctrl-btn" data-key="25" data-tooltip="Volume down (F8)">🔉<span class="f-key">F8</span></button>
-      <button class="ctrl-btn" data-key="24" data-tooltip="Volume up (F9)">🔊<span class="f-key">F9</span></button>
+      <button class="ctrl-btn" data-key="26" data-tooltip="Power button (F7)"><svg viewBox="0 0 24 24"><path d="M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10"/></svg><span class="f-key">F7</span></button>
+      <button class="ctrl-btn" data-key="25" data-tooltip="Volume down (F8)"><svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg><span class="f-key">F8</span></button>
+      <button class="ctrl-btn" data-key="24" data-tooltip="Volume up (F9)"><svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"/></svg><span class="f-key">F9</span></button>
 
       <div class="divider"></div>
 
       <!-- Group 4: Media & Capture -->
-      <button class="ctrl-btn" id="btn-toggle-audio" data-tooltip="Toggle PC Audio (F10)">🎧<span class="f-key">F10</span></button>
-      <button class="ctrl-btn" id="btn-show-mirror" data-key="show-mirror" data-tooltip="Wake Mirror (F11)">📱<span class="f-key">F11</span></button>
-      <button class="ctrl-btn" data-key="screenshot" data-tooltip="Take screenshot">📸</button>
+      <button class="ctrl-btn" id="btn-toggle-audio" data-tooltip="Toggle PC Audio (F10)"><svg viewBox="0 0 24 24"><path d="M3 18v-6a9 9 0 0 1 18 0v6M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3"/></svg><span class="f-key">F10</span></button>
+      <button class="ctrl-btn" id="btn-show-mirror" data-key="show-mirror" data-tooltip="Wake Mirror (F11)"><svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg><span class="f-key">F11</span></button>
+      <button class="ctrl-btn" data-key="screenshot" data-tooltip="Take screenshot"><svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
 
       <div class="divider"></div>
 
       <!-- Group 5: Window Controls -->
-      <button class="ctrl-btn" id="btn-mirror-pin" data-tooltip="Pin Mirror on Top">📌</button>
-      <button class="ctrl-btn" id="btn-auto-hide" data-tooltip="Auto-hide: OFF (F12)">🙈<span class="f-key">F12</span></button>
+      <button class="ctrl-btn" id="btn-mirror-pin" data-tooltip="Pin Mirror on Top"><svg viewBox="0 0 24 24"><path d="M18 8h-1V4h1a1 1 0 0 0 0-2H5a1 1 0 0 0 0 2h1v4H5a1 1 0 0 0 0 2h6.2l.8 7H9v2h6v-2h-3l.8-7H18a1 1 0 0 0 0-2z"/></svg></button>
+      <button class="ctrl-btn" id="btn-dock-cycle" data-tooltip="Cycle Dock Position (🧭)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg></button>
+      <button class="ctrl-btn" id="btn-auto-hide" data-tooltip="Auto-hide: OFF (F12)"><svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg><span class="f-key">F12</span></button>
     </div>
   </div>
 
@@ -276,10 +364,9 @@
   let isAudioForward = false;
   let screenOffState = false;
   let isMirrorPinned = false;
-  let isSidebarOpen  = true;
+  let dockEdge       = localStorage.getItem('wpr_dock_edge') || 'right';
 
   const sidebar     = document.getElementById('sidebar');
-  const miniTab     = document.getElementById('mini-tab');
   const sidebarWrap = document.getElementById('sidebar-wrap');
 
   /* ─────────────────────────────────────────
@@ -297,6 +384,33 @@
   // Set passthrough on load
   window.addEventListener('load', () => {
     window.api.setIgnoreMouseEvents(true, { forward: true });
+    
+    // Sync current dock edge to main process & apply styles
+    if (window.api.setDockEdge) {
+      window.api.setDockEdge(dockEdge);
+    }
+    updateDockUI(dockEdge);
+  });
+
+  /* ─────────────────────────────────────────
+     Docking Edge Toggle Cycle
+   ───────────────────────────────────────── */
+  function updateDockUI(edge) {
+    document.body.className = `dock-${edge}`;
+    const btn = document.getElementById('btn-dock-cycle');
+    if (btn) {
+      btn.setAttribute('data-tooltip', `Dock Edge: ${edge.toUpperCase()} (🧭)`);
+    }
+  }
+
+  document.getElementById('btn-dock-cycle').addEventListener('click', () => {
+    const sequence = { right: 'bottom', bottom: 'left', left: 'top', top: 'right' };
+    dockEdge = sequence[dockEdge];
+    localStorage.setItem('wpr_dock_edge', dockEdge);
+    if (window.api.setDockEdge) {
+      window.api.setDockEdge(dockEdge);
+    }
+    updateDockUI(dockEdge);
   });
 
   /* ─────────────────────────────────────────
@@ -310,6 +424,12 @@
     if (!btn) return;
     btn.classList.toggle('btn-active', enabled);
     btn.setAttribute('data-tooltip', `Auto-hide: ${enabled ? '🔵 ON' : '⚪ OFF'} (F12)`);
+    
+    // Flash visual feedback when button is updated (triggered via keyboard F12)
+    btn.style.transform = 'scale(0.85)';
+    setTimeout(() => {
+      btn.style.transform = '';
+    }, 120);
   }
 
   document.getElementById('btn-auto-hide').addEventListener('click', () => {
@@ -400,7 +520,7 @@
 
   /* ─────────────────────────────────────────
      Button click → action mapping
-  ───────────────────────────────────────── */
+   ───────────────────────────────────────── */
   document.querySelectorAll('.ctrl-btn[data-key]').forEach(btn => {
     btn.addEventListener('click', () => {
       const key = btn.getAttribute('data-key');
@@ -416,7 +536,7 @@
 
   /* ─────────────────────────────────────────
      Local F-key when window has focus
-  ───────────────────────────────────────── */
+   ───────────────────────────────────────── */
   document.addEventListener('keydown', e => {
     const map = {
       F1: '3', F2: '4', F3: '187', F4: 'rotate', F5: 'password',

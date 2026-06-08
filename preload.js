@@ -34,6 +34,7 @@ contextBridge.exposeInMainWorld('api', {
   setAutoHideState:    (enabled)        => ipcRenderer.invoke('set-auto-hide-state', enabled),
   toggleAutoHide:      ()               => ipcRenderer.invoke('toggle-auto-hide'),
   getAutoHideState:    ()               => ipcRenderer.invoke('get-auto-hide-state'),
+  setDockEdge:         (edge)           => ipcRenderer.invoke('set-dock-edge', edge),
 
   // ── Mirror always-on-top (Win32 SetWindowPos) ─────────────────────────────
   setMirrorAlwaysOnTop: (pinned)        => ipcRenderer.invoke('set-mirror-always-on-top', pinned),

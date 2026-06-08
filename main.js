@@ -23,6 +23,7 @@ let isAutoHideEnabled = false;
 let hasMouseEntered = false;
 let isMirrorHidden = false;
 let lastKnownScrcpyBounds = null;
+let dockEdge = 'right';
 
 function runBackgroundCleanUp() {
   if (isQuitting) return;
@@ -187,10 +188,17 @@ function startScrcpyTracking() {
   hasMouseEntered = false;
   lastKnownScrcpyBounds = null;
 
-  // Register F12 immediately for the active mirror session
+  // Register F12 and Ctrl+F12 immediately for the active mirror session
   try {
     if (!globalShortcut.isRegistered('F12')) {
       globalShortcut.register('F12', () => {
+        toggleAutoHideMode();
+      });
+    }
+  } catch (e) {}
+  try {
+    if (!globalShortcut.isRegistered('Ctrl+F12')) {
+      globalShortcut.register('Ctrl+F12', () => {
         toggleAutoHideMode();
       });
     }
@@ -253,23 +261,43 @@ function startScrcpyTracking() {
         }
       } else {
         const parts = trimmed.split(/\s+/).map(Number);
-        if (parts.length >= 5 && parts.slice(0, 4).every(isFinite)) {
-          const [L, T, R, B, isFg, isMouseOverUnused] = parts;
+        if (parts.length >= 7 && parts.slice(0, 4).every(isFinite)) {
+          const [L, T, R, B, isFg, isMouseOverUnused, isMinimized] = parts;
+
+          const isWindowMinimized = (isMinimized === 1) || (L <= -32000 || T <= -32000);
+          if (isWindowMinimized) {
+            if (overlayWindow && !overlayWindow.isDestroyed() && overlayWindow.isVisible()) {
+              overlayWindow.hide();
+            }
+            return;
+          }
           
           if (L > -10000 && T > -10000 && R > L && B > T) {
             notFoundCount = 0;
             const W = R - L;
             const H = B - T;
 
+            const sideSize = (dockEdge === 'top' || dockEdge === 'bottom') ? 76 : 48;
+            let ob;
+            if (dockEdge === 'right') {
+              ob = { x: L + W - 8, y: T, width: sideSize, height: H };
+            } else if (dockEdge === 'left') {
+              ob = { x: L - sideSize + 8, y: T, width: sideSize, height: H };
+            } else if (dockEdge === 'top') {
+              ob = { x: L + 8, y: T - sideSize + 4, width: W - 16, height: sideSize };
+            } else if (dockEdge === 'bottom') {
+              ob = { x: L + 8, y: T + H - 8, width: W - 16, height: sideSize };
+            }
+
             if (W > 50 && H > 50) {
-              const sideW = isSidebarExpanded ? SIDEBAR_EXPANDED : SIDEBAR_COLLAPSED;
-              const totalW = W + sideW;
-              lastKnownScrcpyBounds = { x: L, y: T, width: totalW, height: H };
+              lastKnownScrcpyBounds = { x: L, y: T, width: W, height: H };
 
               // Auto-hide and Wake check using precise screen coords
               if (isAutoHideEnabled && isMirrorActive) {
                 const mouse = screen.getCursorScreenPoint();
-                const isMouseOver = (mouse.x >= L && mouse.x <= L + totalW && mouse.y >= T && mouse.y <= B);
+                const isOverMirror = (mouse.x >= L && mouse.x <= L + W && mouse.y >= T && mouse.y <= T + H);
+                const isOverOverlay = (mouse.x >= ob.x && mouse.x <= ob.x + ob.width && mouse.y >= ob.y && mouse.y <= ob.y + ob.height);
+                const isMouseOver = isOverMirror || isOverOverlay;
                 
                 if (isMirrorHidden) {
                   if (isMouseOver) {
@@ -307,10 +335,8 @@ function startScrcpyTracking() {
               mainWindow.webContents.send('scrcpy-bounds-updated', { x: L, y: T, width: R - L, height: B - T });
             }
 
-            const sideW = isSidebarExpanded ? SIDEBAR_EXPANDED : SIDEBAR_COLLAPSED;
-            const ob = { x: L, y: T, width: (R - L) + sideW, height: B - T };
-
-            const shouldBeVisible = (isFg === 1) || isMirrorPinned;
+            const isWindowMinimized = (isMinimized === 1);
+            const shouldBeVisible = !isWindowMinimized;
             const shouldBeTopmost = (isFg === 1) || isMirrorPinned;
 
             if (shouldBeVisible) {
@@ -330,7 +356,7 @@ function startScrcpyTracking() {
 
             if (isFg === 1) {
               if (!wereFKeysRegistered) {
-                registerFKeys();
+                // registerFKeys(); // Disabled to stop sending global shortcuts
                 wereFKeysRegistered = true;
               }
             } else {
@@ -377,6 +403,9 @@ function stopScrcpyTracking() {
   }
   try {
     globalShortcut.unregister('F12');
+  } catch (_) {}
+  try {
+    globalShortcut.unregister('Ctrl+F12');
   } catch (_) {}
   if (wereFKeysRegistered) {
     const keys = ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'F10', 'F11'];
@@ -603,6 +632,11 @@ ipcMain.handle('set-sidebar-state', (event, expanded) => {
     lastOverlayBounds = newBounds;
     overlayWindow?.setBounds(newBounds);
   }
+  return { success: true };
+});
+
+ipcMain.handle('set-dock-edge', (event, edge) => {
+  dockEdge = edge;
   return { success: true };
 });
 

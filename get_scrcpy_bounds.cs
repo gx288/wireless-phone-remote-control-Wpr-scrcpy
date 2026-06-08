@@ -18,6 +18,23 @@ class Program {
     public static extern bool IsIconic(IntPtr hWnd);
 
     [DllImport("user32.dll", SetLastError = true)]
+    public static extern IntPtr GetWindow(IntPtr hWnd, uint uCmd);
+
+    [DllImport("user32.dll", EntryPoint = "SetWindowLong", SetLastError = true)]
+    public static extern int SetWindowLong32(IntPtr hWnd, int nIndex, int dwNewLong);
+
+    [DllImport("user32.dll", EntryPoint = "SetWindowLongPtr", SetLastError = true)]
+    public static extern IntPtr SetWindowLongPtr64(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+
+    public static IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr dwNewLong) {
+        if (IntPtr.Size == 8) {
+            return SetWindowLongPtr64(hWnd, nIndex, dwNewLong);
+        } else {
+            return new IntPtr(SetWindowLong32(hWnd, nIndex, dwNewLong.ToInt32()));
+        }
+    }
+
+    [DllImport("user32.dll", SetLastError = true)]
     public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
 
     [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
@@ -101,7 +118,17 @@ class Program {
                 }
             }
 
+            if (overlayHwnd == IntPtr.Zero) {
+                overlayHwnd = FindWindowByTitle("AeroScrcpyOverlayWindow");
+            }
+
             if (scrcpyHwnd != IntPtr.Zero) {
+                if (overlayHwnd != IntPtr.Zero) {
+                    const uint GW_OWNER = 4;
+                    if (GetWindow(overlayHwnd, GW_OWNER) != scrcpyHwnd) {
+                        SetWindowLongPtr(overlayHwnd, -8, scrcpyHwnd);
+                    }
+                }
                 RECT rect = new RECT();
                 if (GetWindowRect(scrcpyHwnd, ref rect)) {
                     IntPtr fg = GetForegroundWindow();
@@ -109,8 +136,10 @@ class Program {
                     if (fg == scrcpyHwnd || (overlayHwnd != IntPtr.Zero && fg == overlayHwnd)) {
                         isFg = 1;
                     }
+                    int isMinimized = 0;
                     if (IsIconic(scrcpyHwnd)) {
                         isFg = 0;
+                        isMinimized = 1;
                     }
                     int isMouseOver = 0;
                     POINT pt;
@@ -119,7 +148,7 @@ class Program {
                             isMouseOver = 1;
                         }
                     }
-                    Console.WriteLine("{0} {1} {2} {3} {4} {5}", rect.Left, rect.Top, rect.Right, rect.Bottom, isFg, isMouseOver);
+                    Console.WriteLine("{0} {1} {2} {3} {4} {5} {6}", rect.Left, rect.Top, rect.Right, rect.Bottom, isFg, isMouseOver, isMinimized);
                 } else {
                     Console.WriteLine("NOT_FOUND");
                 }
